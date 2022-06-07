@@ -41,11 +41,6 @@ In this project, I will build the infrastructure to host a high availability web
     - Add key to agent
     `ssh-add ~/.ssh/key_pair`
 
-## Solution overview
-
-![AWS Architecture diagram](/docs/images/cfn_arch.png)
-
-## Solution details
 ## Building the Network
 
 
