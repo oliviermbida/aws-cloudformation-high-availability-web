@@ -1,6 +1,9 @@
 # Deploy a high-availability web app using CloudFormation
 In this project, I will build the infrastructure to host a high availability web application using AWS CloudFormation.
-## Project Overview
+## Solution overview
+
+![AWS Architecture diagram](/docs/images/cfn_arch.png)
+
     ### Network
     - A VPC with public and private subnets, spanning an AWS region.
     - Public and Private subnet in every Availability Zones chosen. 
@@ -17,6 +20,8 @@ In this project, I will build the infrastructure to host a high availability web
     - A Bastion EC2 instance in public subnets for SSH connections to web servers in private subnets.
     - A Load Auto Scaling Group to test the Application Load Balancer
 
+
+## Solution details
 - Prerequisites:
     - Amazon AWS Account
     - AWS CLI v2
