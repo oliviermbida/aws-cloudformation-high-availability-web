@@ -21,8 +21,8 @@ In this project, I will build the infrastructure to host a high availability web
     - An Application Load Balancer (ALB) in public subnets for internet traffic to web application servers in private subnets.
 
 ## Web Application
-    - An Auto Scaling Group for EC2 instances in private subnets
-    - S3 Bucket for VPC endpoint access by web servers in private subnets
+    - An Auto Scaling Group of EC2 instances in private subnets.
+    - S3 Bucket service as a VPC endpoint access by web servers in private subnets.
 
 ## Testing
     - A Bastion EC2 instance in public subnets for SSH connections to web servers in private subnets.
