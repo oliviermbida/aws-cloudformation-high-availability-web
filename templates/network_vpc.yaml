@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:  Creates VPC stack with subnets, network acls, Internet gateway, Nat gateways and Vpc S3 endpoint. 
+Metadata:
+  Authors:
+    Description: Olivier Mbida (olivier.mbida@ai-uavsystems.com)
+Parameters: 
+  AWSRegion:
+    Type: String
+    AllowedValues: 
+      - us-east-1
+      - us-east-2
+      - us-west-1
+      - us-west-2
+    Default: us-east-1
+  VpcAzs:
+    Description: Availability Zones used in VPC. 
+    Type: CommaDelimitedList
+  AzsMap:
+    Description: Availability Zones Map. Must match available zones in VpcAZs parameter. 
+    Type: String
+  VpcCidr:
+    Description: CIDR block for the VPC
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.0.0/16
+  VpcTenancy:
+    AllowedValues:
+      - default
+      - dedicated
+    Default: default
+    Type: String
+  PublicSubnetCidrBlocks:
+    Description: "Comma-delimited list of Public CIDR blocks"
+    Type: CommaDelimitedList
+    Default: "10.0.200.0/24, 10.0.201.0/24, 10.0.202.0/24, 10.0.203.0/24, 10.0.204.0/24, 10.0.205.0/24"
+  PrivateSubnetCidrBlocks:
+    Description: "Comma-delimited list of Private CIDR blocks"
+    Type: CommaDelimitedList
+    Default: "10.0.0.0/22, 10.0.4.0/22, 10.0.8.0/22, 10.0.12.0/22, 10.0.16.0/22, 10.0.20.0/22"
+  S3BucketName:
+    Description: S3 Bucket Name for Vpc Endpoint
+    Type: String
+    Default: cfn-803394216630-bucket
+  SshAccessCidr:
+    Description: The CIDR IP range that is permitted to SSH to bastion instance. Note - a value of 0.0.0.0/0 will allow access from ANY IP address.
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Default: 0.0.0.0/0    
+#
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      InstanceTenancy: !Ref VpcTenancy
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'Vpc / ', !Ref 'AWS::StackName' ] ]
+# Public subnets
