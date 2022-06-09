@@ -12,23 +12,6 @@ In this project, I will build the infrastructure to host a high availability web
 5. Web application servers run as Auto Scaling Group of EC2 instances in private subnets with a security group.
 6. A Vpc endpoint gateway to an S3 bucket service. Web application servers access to the service from private subnets are routed to this gateway endpoint to avoid the Nat gateways charges.
 
-## Network
-    - A VPC with public and private subnets, spanning an AWS region.
-    - Public and Private subnet in every Availability Zones chosen. 
-    - Internet Gateway for inbound and outbound traffic in the VPC.
-    - NAT Gateway in every Availability Zones for internet access for web application servers in private subnets.
-    - A VPC endpoint gateway for S3 Bucket access by web application servers in private subnets.
-    - An Application Load Balancer (ALB) in public subnets for internet traffic to web application servers in private subnets.
-
-## Web Application
-    - An Auto Scaling Group of EC2 instances in private subnets.
-    - S3 Bucket service as a VPC endpoint access by web servers in private subnets.
-
-## Testing
-    - A Bastion EC2 instance in public subnets for SSH connections to web servers in private subnets.
-    - A Load Auto Scaling Group to test the Application Load Balancer.
-
-
 ## Solution details
 - Prerequisites:
     - Amazon AWS Account
@@ -48,9 +31,10 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
     - VpcAzs parameter is a list of Availability Zones in the form "0,use1-az2,0,use1-az4,0,0" for zones 2 and 4 in the region us-east-1. Zeros inserted as a placeholder for the unused zones. The format is for up to six zones.
     - AzsMap parameter is a map matching VpcAzs in the form "0,2,0,4,0,0" to match zones 2 and 4. Zeros inserted as a placeholder for the unused zones. Why another parameter? It is needed to set Conditions to match VpcAzs parameter.
     - A script Azs.sh is provided to query the Availabilty Zones for any Region. This is used to populate the two parameters.
+
             `aws ec2 describe-availability-zones \
         --region $Region --query "AvailabilityZones[?GroupName=='$Region'].ZoneId"`
-    * $Region (e.g us-east-1)
+    $Region (e.g us-east-1)
 
 
 ## Web Application 
