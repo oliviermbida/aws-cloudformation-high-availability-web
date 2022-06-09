@@ -48,6 +48,20 @@ Parameters:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     Default: 0.0.0.0/0    
 #
+Conditions:
+  AZ0Condition:
+    !Equals [!Select [0, !Split [",", !Ref AzsMap]], 1]  
+  AZ1Condition:
+    !Equals [!Select [1, !Split [",", !Ref AzsMap]], 2] 
+  AZ2Condition:
+    !Equals [!Select [2, !Split [",", !Ref AzsMap]], 3] 
+  AZ3Condition:
+    !Equals [!Select [3, !Split [",", !Ref AzsMap]], 4] 
+  AZ4Condition:
+    !Equals [!Select [4, !Split [",", !Ref AzsMap]], 5] 
+  AZ5Condition:
+    !Equals [!Select [5, !Split [",", !Ref AzsMap]], 6] 
+
 Resources:
   Vpc:
     Type: AWS::EC2::VPC
@@ -60,3 +74,173 @@ Resources:
         - Key: Name
           Value: !Join [ '', [ 'Vpc / ', !Ref 'AWS::StackName' ] ]
 # Public subnets
+  PublicSubnet0:
+    Condition: AZ0Condition
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZoneId: 
+        !Select [0, !Ref VpcAzs]
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [0, !Ref PublicSubnetCidrBlocks]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'PublicSubnet0 / ', !Ref 'AWS::StackName' ] ]
+        - Key: SubnetType
+          Value: Public
+  PublicSubnet1:
+    Condition: AZ1Condition
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZoneId: 
+        !Select [1, !Ref VpcAzs]
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [1, !Ref PublicSubnetCidrBlocks]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'PublicSubnet1 / ', !Ref 'AWS::StackName' ] ]
+        - Key: SubnetType
+          Value: Public
+  PublicSubnet2:
+    Condition: AZ2Condition
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZoneId: 
+        !Select [2, !Ref VpcAzs]
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [2, !Ref PublicSubnetCidrBlocks]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'PublicSubnet2 / ', !Ref 'AWS::StackName' ] ]
+        - Key: SubnetType
+          Value: Public
+  PublicSubnet3:
+    Condition: AZ3Condition
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZoneId: 
+        !Select [3, !Ref VpcAzs]
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [3, !Ref PublicSubnetCidrBlocks]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'PublicSubnet3 / ', !Ref 'AWS::StackName' ] ]
+        - Key: SubnetType
+          Value: Public
+  PublicSubnet4:
+    Condition: AZ4Condition
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZoneId: 
+        !Select [4, !Ref VpcAzs]
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [4, !Ref PublicSubnetCidrBlocks]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'PublicSubnet4 / ', !Ref 'AWS::StackName' ] ]
+        - Key: SubnetType
+          Value: Public
+  PublicSubnet5:
+    Condition: AZ5Condition
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZoneId: 
+        !Select [5, !Ref VpcAzs]
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [5, !Ref PublicSubnetCidrBlocks]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'PublicSubnet5 / ', !Ref 'AWS::StackName' ] ]
+        - Key: SubnetType
+          Value: Public
+# Private subnets
+  PrivateSubnet0:
+    Condition: AZ0Condition
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZoneId: 
+        !Select [0, !Ref VpcAzs]
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [0, !Ref PrivateSubnetCidrBlocks]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'PrivateSubnet0 / ', !Ref 'AWS::StackName' ] ]
+        - Key: SubnetType
+          Value: Private
+  PrivateSubnet1:
+    Condition: AZ1Condition
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZoneId: 
+        !Select [1, !Ref VpcAzs]
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [1, !Ref PrivateSubnetCidrBlocks]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'PrivateSubnet1 / ', !Ref 'AWS::StackName' ] ]
+        - Key: SubnetType
+          Value: Private
+  PrivateSubnet2:
+    Condition: AZ2Condition
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZoneId: 
+        !Select [2, !Ref VpcAzs]
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [2, !Ref PrivateSubnetCidrBlocks]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'PrivateSubnet2 / ', !Ref 'AWS::StackName' ] ]
+        - Key: SubnetType
+          Value: Private
+  PrivateSubnet3:
+    Condition: AZ3Condition
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZoneId: 
+        !Select [3, !Ref VpcAzs]
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [3, !Ref PrivateSubnetCidrBlocks]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'PrivateSubnet3 / ', !Ref 'AWS::StackName' ] ]
+        - Key: SubnetType
+          Value: Private
+  PrivateSubnet4:
+    Condition: AZ4Condition
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZoneId: 
+        !Select [4, !Ref VpcAzs]
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [4, !Ref PrivateSubnetCidrBlocks]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'PrivateSubnet4 / ', !Ref 'AWS::StackName' ] ]
+        - Key: SubnetType
+          Value: Private
+  PrivateSubnet5:
+    Condition: AZ5Condition
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZoneId: 
+        !Select [5, !Ref VpcAzs]
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [5, !Ref PrivateSubnetCidrBlocks]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'PrivateSubnet5 / ', !Ref 'AWS::StackName' ] ]
+        - Key: SubnetType
+          Value: Private
+# Internet Gateway & Public subnets routing
