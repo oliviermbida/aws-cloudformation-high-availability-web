@@ -40,12 +40,17 @@ In this project, I will build the infrastructure to host a high availability web
     
     - Set the permissions of your key file
     `chmod 400 key_pair.pem`
-    - Start Ssh agent
-    `eval "$(ssh-agent -s)"`
-    - Add key to agent
-    `ssh-add ~/.ssh/key_pair`
 
 ## Building the Network
+- The issue of multi-account [Availability zones mapping](https://aws.amazon.com/premiumsupport/knowledge-center/vpc-map-cross-account-availability-zones/). I will be creating subnets using the AvailabilityZoneId property rather than
+using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-getavailabilityzones.html) to obtain your availabilty zone names which may not match the unique zone Ids in your multi-account.
+- For this reason I will use two matching parameters in my stack creation to deal with this issue. The VpcAzs and AzsMap parameters. It guarantees that the unique Availability Zones Ids are always used even if their Availability Zones names are different in your various account.
+    - VpcAzs parameter is a list of Availability Zones in the form "0,use1-az2,0,use1-az4,0,0" for zones 2 and 4 in the region us-east-1. Zeros inserted as a placeholder for the unused zones. The format is for up to six zones.
+    - AzsMap parameter is a map matching VpcAzs in the form "0,2,0,4,0,0" to match zones 2 and 4. Zeros inserted as a placeholder for the unused zones. Why another parameter? It is needed to set Conditions to match VpcAzs parameter.
+    - A script Azs.sh is provided to query the Availabilty Zones for any Region. This is used to populate the two parameters.
+            `aws ec2 describe-availability-zones \
+        --region $Region --query "AvailabilityZones[?GroupName=='$Region'].ZoneId"`
+    * $Region (e.g us-east-1)
 
 
 ## Web Application 
