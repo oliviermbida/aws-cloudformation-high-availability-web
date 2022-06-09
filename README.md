@@ -34,7 +34,7 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
 
             `aws ec2 describe-availability-zones \
         --region us-east-1 --query "AvailabilityZones[?GroupName=='us-east-1'].ZoneId"`
-        
+
 
 
 ## Web Application 
