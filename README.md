@@ -30,12 +30,11 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
 - For this reason I will use two matching parameters in my stack creation to deal with this issue. The VpcAzs and AzsMap parameters. It guarantees that the unique Availability Zones Ids are always used even if their Availability Zones names are different in your various account.
     - VpcAzs parameter is a list of Availability Zones in the form "0,use1-az2,0,use1-az4,0,0" for zones 2 and 4 in the region us-east-1. Zeros inserted as a placeholder for the unused zones. The format is for up to six zones.
     - AzsMap parameter is a map matching VpcAzs in the form "0,2,0,4,0,0" to match zones 2 and 4. Zeros inserted as a placeholder for the unused zones. Why another parameter? It is needed to set Conditions to match VpcAzs parameter.
-    - A script Azs.sh is provided to query the Availabilty Zones for any Region. This is used to populate the two parameters.
+    - A script Azs.sh is provided to query the Availabilty Zones for any Region. This is used to populate the two parameters. e.g for us-east-1
 
             `aws ec2 describe-availability-zones \
-        --region $Region --query "AvailabilityZones[?GroupName=='$Region'].ZoneId"`
+        --region us-east-1 --query "AvailabilityZones[?GroupName=='us-east-1'].ZoneId"`
         
-    $Region (e.g us-east-1)
 
 
 ## Web Application 
