@@ -1,0 +1,204 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Bastion (desired:1) Auto Scaling group for testing
+
+Metadata:
+
+  Authors:
+    Description: Olivier Mbida (olivier.mbida@ai-uavsystems.com)
+
+
+Parameters:
+  EMailAddress: 
+    Description: Email address for SNS issue notification
+    NoEcho: true
+    Type: String
+    AllowedPattern: ^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$
+    ConstraintDescription: Enter a valid email address
+  AWSRegion: 
+    Description: AWS Region for stack creation
+    Type: String
+    AllowedValues:
+    - us-east-1
+    - us-east-2
+    - us-west-1
+    - us-west-2
+    ConstraintDescription: This stack can only be created in these regions us-east-1, us-east-2, us-west-1 and us-west-2.
+    Default: us-east-1
+  Subnets:
+    Description: "Comma-delimited list of subnets"
+    Type: CommaDelimitedList
+  EnvironmentType: 
+    Description: The environment type
+    Type: String
+    Default: test
+    AllowedValues: 
+      - dev
+      - test
+      - prod
+    ConstraintDescription: Must be a development (dev), test or production (prod) environment.
+  EC2KeyName:
+    NoEcho: true
+    Description: Name of an EC2 KeyPair. Your bastion instances will launch with this KeyPair.
+    Type: AWS::EC2::KeyPair::KeyName
+  BastionInstanceType:
+    Description: Bastion EC2 instance type.
+    Type: String
+    AllowedValues:
+      - t1.micro
+      - t2.micro
+    ConstraintDescription: Must be a valid Amazon EC2 instance type free tier eligible.
+    Default: t2.micro
+  BastionSecurityGroup:
+    Description: Select the bastion security group.
+    Type: AWS::EC2::SecurityGroup::Id
+  AzsMap: 
+    Type: String
+# Validate parameters
+Rules:
+  testInstanceType:
+    RuleCondition: !Equals 
+      - !Ref EnvironmentType
+      - test
+    Assertions:
+      - Assert:
+          'Fn::Contains':
+            - - t1.micro
+            - !Ref BastionInstanceType
+        AssertDescription: 'For a test environment, the instance type must be t1.micro'
+  devInstanceType:
+    RuleCondition: !Equals 
+      - !Ref EnvironmentType
+      - dev
+    Assertions:
+      - Assert:
+          'Fn::Contains':
+            - - t2.micro
+            - !Ref BastionInstanceType
+        AssertDescription: 'For a development environment, the instance type must be t2.micro'
+  prodInstanceType:
+    RuleCondition: !Equals 
+      - !Ref EnvironmentType
+      - prod
+    Assertions:
+      - Assert:
+          'Fn::Contains':
+            - - t2.micro
+            - !Ref BastionInstanceType
+        AssertDescription: 'For a production environment, the instance type must be t2.micro'
+
+
+# AMI - Software configuration (operating system, application server, and applications)
+# Must be free tier eligible
+Mappings:
+
+  RegionMap:
+    us-east-1:
+      dev: ami-0c4f7023847b90238 # Ubuntu Server 20.04 LTS (HVM), SSD Volume Type (64-bit (x86))
+      test: ami-09d56f8956ab235b3 # Ubuntu Server 22.04 LTS (HVM), SSD Volume Type (64-bit (x86))
+      prod: ami-0022f774911c1d690 # Amazon Linux 2 AMI (HVM) - Kernel 5.10, SSD Volume Type (64-bit (x86))
+    us-east-2:
+      dev: ami-0eea504f45ef7a8f7 # Ubuntu Server 20.04 LTS (HVM), SSD Volume Type (64-bit (x86))
+      test: ami-0aeb7c931a5a61206 # Ubuntu Server 22.04 LTS (HVM), SSD Volume Type (64-bit (x86))
+      prod: ami-0fa49cc9dc8d62c84 # Amazon Linux 2 AMI (HVM) - Kernel 5.10, SSD Volume Type (64-bit (x86))
+
+Conditions:
+  AZ0Public: 
+    !Equals [!Select [0, !Split [",", !Ref AzsMap]], 1] 
+  AZ1Public: 
+    !Equals [!Select [1, !Split [",", !Ref AzsMap]], 2] 
+  AZ2Public: 
+    !Equals [!Select [2, !Split [",", !Ref AzsMap]], 3] 
+  AZ3Public: 
+    !Equals [!Select [3, !Split [",", !Ref AzsMap]], 4]
+  AZ4Public: 
+    !Equals [!Select [4, !Split [",", !Ref AzsMap]], 5] 
+  AZ5Public: 
+    !Equals [!Select [5, !Split [",", !Ref AzsMap]], 6]
+  SubnetsAvailable:
+    !Not [!Equals [!Join ['', !Ref Subnets], '']]
+
+Resources:
+
+# SNS Topic
+  snsTopicForBastionAutoScalingGroup:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+      - Endpoint: !Ref EMailAddress
+        Protocol: email
+
+# Bastion auto scaling group of 1 (desired)
+  BastionAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Condition: SubnetsAvailable
+    DependsOn: 
+      - snsTopicForBastionAutoScalingGroup
+    Properties:
+      Cooldown: 60
+      HealthCheckGracePeriod: 120
+      HealthCheckType: EC2
+      LaunchConfigurationName: !Ref BastionLaunchConfiguration
+      MaxSize: 1
+      MinSize: 0
+      DesiredCapacity: 1
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'Bastion/', !Ref 'AWS::StackName' ] ]
+          PropagateAtLaunch: true
+      VPCZoneIdentifier:
+        Ref: Subnets
+      NotificationConfigurations:
+      - TopicARN: !Ref snsTopicForBastionAutoScalingGroup
+        NotificationTypes:
+        - autoscaling:EC2_INSTANCE_LAUNCH
+        - autoscaling:EC2_INSTANCE_LAUNCH_ERROR
+        - autoscaling:EC2_INSTANCE_TERMINATE
+        - autoscaling:EC2_INSTANCE_TERMINATE_ERROR
+        - autoscaling:TEST_NOTIFICATION
+
+# Launch configuration
+  BastionLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !Ref BastionInstanceProfile
+      ImageId: !FindInMap [ RegionMap, !Ref AWSRegion, !Ref EnvironmentType ]
+      InstanceMonitoring: true
+      InstanceType: !Ref BastionInstanceType
+      KeyName: !Ref EC2KeyName
+      SecurityGroups:
+        - !Ref BastionSecurityGroup
+
+# IAM Instance Profile and Role
+  BastionInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: '/'
+      Roles:
+      - !Ref BastionInstanceRole
+  BastionInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: '/'
+      Policies:
+      - PolicyName: logs
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - logs:DescribeLogStreams
+            Resource:
+            - arn:aws:logs:*:*:*
