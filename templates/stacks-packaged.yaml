@@ -1,0 +1,177 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack to deploy a highly available web application. It launches multiple
+  nested stacks for different tiers
+Metadata:
+  Authors:
+    Description: Olivier Mbida (olivier.mbida@ai-uavsystems.com)
+Parameters:
+  AWSRegion:
+    Description: AWS Region for stack creation
+    Type: String
+    AllowedValues:
+    - us-east-1
+    - us-east-2
+    - us-west-1
+    - us-west-2
+    Default: us-east-1
+  VpcAzs:
+    Description: Availability Zones used in VPC.
+    Type: CommaDelimitedList
+  AzsMap:
+    Description: Availability Zones Map. Must match available zones in VpcAZs parameter
+    Type: String
+  VpcCidr:
+    Description: CIDR block for the VPC
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.0.0/16
+  VpcTenancy:
+    Description: The allowed tenancy of instances launched into the VPC
+    Type: String
+    AllowedValues:
+    - default
+    - dedicated
+    Default: default
+  S3BucketName:
+    Description: S3 bucket name for Vpc Gateway Endpoint
+    Type: String
+    Default: cfn-803394216630-bucket
+  SshAccessCidr:
+    Description: The CIDR IP range that is permitted to SSH to bastion instance. Note
+      - a value of 0.0.0.0/0 will allow access from ANY IP address.
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Default: 0.0.0.0/0
+  PublicSubnet0Cidr:
+    Description: CIDR block for Public subnet 0 located in Availability Zone 0
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.200.0/24
+  PublicSubnet1Cidr:
+    Description: CIDR block for Public subnet 1 located in Availability Zone 1
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.201.0/24
+  PublicSubnet2Cidr:
+    Description: CIDR block for Public subnet 2 located in Availability Zone 2
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.202.0/24
+  PublicSubnet3Cidr:
+    Description: CIDR block for Public subnet 3 located in Availability Zone 3
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.203.0/24
+  PublicSubnet4Cidr:
+    Description: CIDR block for Public subnet 4 located in Availability Zone 4
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.204.0/24
+  PublicSubnet5Cidr:
+    Description: CIDR block for Public subnet 5 located in Availability Zone 5
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.205.0/24
+  PrivateSubnet0Cidr:
+    Description: CIDR block for Private subnet 0 located in Availability Zone 0
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.0.0/22
+  PrivateSubnet1Cidr:
+    Description: CIDR block for Private subnet 1 located in Availability Zone 1
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.4.0/22
+  PrivateSubnet2Cidr:
+    Description: CIDR block for Private subnet 2 located in Availability Zone 2
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.8.0/22
+  PrivateSubnet3Cidr:
+    Description: CIDR block for Private subnet 3 located in Availability Zone 3
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.12.0/22
+  PrivateSubnet4Cidr:
+    Description: CIDR block for Private subnet 4 located in Availability Zone 4
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.16.0/22
+  PrivateSubnet5Cidr:
+    Description: CIDR block for Private subnet 5 located in Availability Zone 5
+    Type: String
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.20.0/22
+Resources:
+  newvpc:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AWSRegion:
+          Ref: AWSRegion
+        S3BucketName:
+          Ref: S3BucketName
+        VpcCidr:
+          Ref: VpcCidr
+        SshAccessCidr:
+          Ref: SshAccessCidr
+        VpcTenancy:
+          Ref: VpcTenancy
+        VpcAzs:
+          Fn::Join:
+          - ','
+          - - Fn::Select:
+              - 0
+              - Ref: VpcAzs
+            - Fn::Select:
+              - 1
+              - Ref: VpcAzs
+            - Fn::Select:
+              - 2
+              - Ref: VpcAzs
+            - Fn::Select:
+              - 3
+              - Ref: VpcAzs
+            - Fn::Select:
+              - 4
+              - Ref: VpcAzs
+            - Fn::Select:
+              - 5
+              - Ref: VpcAzs
+        AzsMap:
+          Ref: AzsMap
+        PublicSubnetCidrBlocks:
+          Fn::Join:
+          - ','
+          - - Ref: PublicSubnet0Cidr
+            - Ref: PublicSubnet1Cidr
+            - Ref: PublicSubnet2Cidr
+            - Ref: PublicSubnet3Cidr
+            - Ref: PublicSubnet4Cidr
+            - Ref: PublicSubnet5Cidr
+        PrivateSubnetCidrBlocks:
+          Fn::Join:
+          - ','
+          - - Ref: PrivateSubnet0Cidr
+            - Ref: PrivateSubnet1Cidr
+            - Ref: PrivateSubnet2Cidr
+            - Ref: PrivateSubnet3Cidr
+            - Ref: PrivateSubnet4Cidr
+            - Ref: PrivateSubnet5Cidr
+      Tags:
+      - Key: Name
+        Value: network-vpc
+      TemplateURL: https://s3.us-east-1.amazonaws.com/cli-803394216630-bucket/c546c38fe519321e424e14a1cd323a0b.template
