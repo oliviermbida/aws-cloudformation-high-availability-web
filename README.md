@@ -11,7 +11,7 @@ In this project, I will build the infrastructure to host a high availability web
 4. Nat gateways and an Elastic IP in public subnets for internet access by web application servers in private subnets.
 5. Web application servers run as Auto Scaling Group of EC2 instances in private subnets with a security group.
 6. A Vpc endpoint gateway to an S3 bucket service. Web application servers access to the service from private subnets are routed to this gateway endpoint to avoid the Nat gateways charges.
-
+7. Optional cloudfront distribution to serve the web application.
 ## Solution details
 - Prerequisites:
     - Amazon AWS Account
@@ -89,9 +89,10 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
 
     The S3 Vpc endpoint added a route to the specified route table to direct any S3 prefix list traffic (ip addresses) to the Vpc gateway endpoint not through the Nat gateway or Internet gateway. This can save the costs of using Nat gateways.
 
-    ![Network http80 tests](/docs/images/test_network_http80.png)
 
-    ![Network vpce tests](/docs/images/test_network_vpce.png)
+    ![Network http80 test image](/docs/images/test_network_http80.png)
+
+    ![Network vpce test image](/docs/images/test_network_vpce.png)
 
 ## Web Application 
 
