@@ -41,7 +41,9 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
 - I will also use a nested or tier stack approach with the top stack template called stacks.yaml
 - The Cloudformation templates to build the layers of the network are in:
     - network_vpc.yaml
+
     Through a granular approach using change sets I will add the pieces in the network_vpc.yaml template.
+    
     - Vpc
     - Subnets
     - Internet gateway and public subnets routing
