@@ -43,21 +43,55 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
     - network_vpc.yaml
 
     Through a granular approach using change sets I will add the pieces in the network_vpc.yaml template.
-    
+
     - Vpc
     - Subnets
     - Internet gateway and public subnets routing
     - Nat gateways, Elastic IPs and private subnets routing
     - Additional firewall around subnets with network access control lists (acls)
     - Vpc S3 endpoint gateway
+
     At each stage a simple command will add the pieces:
 
         `./create.sh $(stackName) $(stack-template) $(stack-parameter-file) $(changeSetName) UPDATE`
 
         ![Network Vpc stack](/docs/images/network_vpc.png)
 
+- Lets do our first tests to verify that the resources in the public and private subnets have access to the internet through Http port 80 via routing to Nat gateways and the Internet gateway. Secondly I will also check that the S3 Vpc endpoint is working by downloading from a bucket while in private subnets.
+    - To do this I will ssh into a Bastion (EC2 instance) in public subnets and get access to a test EC2 instance launched in private subnets.
 
+    - Since I am now going to add resources in the network, I will setup security groups around those resources.
+        - network_sgs.yaml (security groups)
+        - network_bastion.yaml (resource in public subnet)
+        - webApp_test.yaml (resource in private subnet)
 
+    - The command to get into the bastion is something like (for linux):
+
+        ssh -i my_ec2_key_pair -A $(user)@ec2-$(instance_public_ip).compute-1.amazonaws.com
+
+    - Once in the bastion, to test internet:
+
+        telnet google.com 80
+
+    - You will get an ESC response from google servers confirming you have internet connection on port 80.
+
+    - Next ssh to the EC2 instance (linux) launched in private subnets.
+
+        ssh -i my_ec2_key_pair -A $(user)@$(instance_private_ip)
+
+    - Note that my_ec2_key_pair was copied into the bastion (set permission chmod 400 on the key)
+    and use it to get into the ec2 linux instance launched in private subnets.
+    Once there repeat the telnet test on google.com port 80.
+
+    - Now get the url of a file in a bucket and download.
+
+        `wget https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz`
+
+    The S3 Vpc endpoint added a route to the specified route table to direct any S3 prefix list traffic (ip addresses) to the Vpc gateway endpoint not through the Nat gateway or Internet gateway. This can save the costs of using Nat gateways.
+
+    ![Network http80 tests](/docs/images/test_network_http80.png)
+
+    ![Network vpce tests](/docs/images/test_network_vpce.png)
 
 ## Web Application 
 
