@@ -518,3 +518,336 @@ Resources:
     Properties:
       RouteTableId: !Ref NatRouteTable5
       SubnetId: !Ref PrivateSubnet5   
+# Network access control
+  PublicNetworkACL:
+    Type: "AWS::EC2::NetworkAcl"
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: "Name"
+          Value: !Join [ '', [ 'PublicNetworkACL / ', !Ref 'AWS::StackName' ] ]
+  PrivateNetworkACL:
+    Type: "AWS::EC2::NetworkAcl"
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: "Name"
+          Value: !Join [ '', [ 'PrivateNetworkACL / ', !Ref 'AWS::StackName' ] ]
+  PublicSubnet0NetworkAclAssociation:
+    Condition: AZ0Condition
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet0
+      NetworkAclId: !Ref "PublicNetworkACL"
+  PublicSubnet1NetworkAclAssociation:
+    Condition: AZ1Condition
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      NetworkAclId: !Ref "PublicNetworkACL"
+  PublicSubnet2NetworkAclAssociation:
+    Condition: AZ2Condition
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      NetworkAclId: !Ref "PublicNetworkACL"
+  PublicSubnet3NetworkAclAssociation:
+    Condition: AZ3Condition
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet3
+      NetworkAclId: !Ref "PublicNetworkACL"
+  PublicSubnet4NetworkAclAssociation:
+    Condition: AZ4Condition
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet4
+      NetworkAclId: !Ref "PublicNetworkACL"
+  PublicSubnet5NetworkAclAssociation:
+    Condition: AZ5Condition
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet5
+      NetworkAclId: !Ref "PublicNetworkACL"
+  PrivateSubnet0NetworkAclAssociation:
+    Condition: AZ0Condition
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet0
+      NetworkAclId: !Ref "PrivateNetworkACL"
+  PrivateSubnet1NetworkAclAssociation:
+    Condition: AZ1Condition
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      NetworkAclId: !Ref "PrivateNetworkACL"
+  PrivateSubnet2NetworkAclAssociation:
+    Condition: AZ2Condition
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      NetworkAclId: !Ref "PrivateNetworkACL"
+  PrivateSubnet3NetworkAclAssociation:
+    Condition: AZ3Condition
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet3
+      NetworkAclId: !Ref "PrivateNetworkACL"
+  PrivateSubnet4NetworkAclAssociation:
+    Condition: AZ4Condition
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet4
+      NetworkAclId: !Ref "PrivateNetworkACL"
+  PrivateSubnet5NetworkAclAssociation:
+    Condition: AZ5Condition
+    Type: "AWS::EC2::SubnetNetworkAclAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet5
+      NetworkAclId: !Ref "PrivateNetworkACL"
+
+# Public Network ACL Firewall Protection
+
+# Internet-facing load balancer acls, listener port 80
+  InboundHttpACL:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PublicNetworkACL
+      RuleNumber: '100'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "false"
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: '80'
+        To: '80'
+  InboundHttpsACL:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PublicNetworkACL
+      RuleNumber: '200'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "false"
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: '443'
+        To: '443'
+  InboundSshACL:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PublicNetworkACL
+      RuleNumber: '300'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "false"
+      CidrBlock: !Ref SshAccessCidr
+      PortRange:
+        From: '22'
+        To: '22'
+# Internet-facing load balancer acls
+  InboundEphACL:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PublicNetworkACL
+      RuleNumber: '400'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "false"
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: '1024'
+        To: '65535'
+  InboundEphACLUdp:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PublicNetworkACL
+      RuleNumber: '410'
+      Protocol: "17"
+      RuleAction: "allow"
+      Egress: "false"
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: '1024'
+        To: '65535'
+  OutboundHttpACL:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PublicNetworkACL
+      RuleNumber: '100'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: '80'
+        To: '80'
+  OutboundHttpsACL:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PublicNetworkACL
+      RuleNumber: '200'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: '443'
+        To: '443'
+  OutboundSshACL:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PublicNetworkACL
+      RuleNumber: '300'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "true"
+      CidrBlock: !Ref SshAccessCidr
+      PortRange:
+        From: '22'
+        To: '22'
+  OutboundEphACL:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PublicNetworkACL
+      RuleNumber: '400'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: '1024'
+        To: '65535'
+  OutboundEphACLUdp:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PublicNetworkACL
+      RuleNumber: '410'
+      Protocol: "17"
+      RuleAction: "allow"
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: '1024'
+        To: '65535'
+# Private Network ACL Firewall Protection
+  InboundHttpACLP:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkACL
+      RuleNumber: '100'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "false"
+      CidrBlock: !Ref VpcCidr 
+      PortRange:
+        From: '80'
+        To: '80'
+  InboundHttpsACLP:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkACL
+      RuleNumber: '200'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "false"
+      CidrBlock: !Ref VpcCidr 
+      PortRange:
+        From: '443'
+        To: '443'
+  InboundSshACLP:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkACL
+      RuleNumber: '300'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "false"
+      CidrBlock: !Ref VpcCidr
+      PortRange:
+        From: '22'
+        To: '22'
+  InboundEphACLP:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkACL
+      RuleNumber: '400'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "false"
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: '1024'
+        To: '65535'
+  InboundEphACLUdpP:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkACL
+      RuleNumber: '410'
+      Protocol: "17"
+      RuleAction: "allow"
+      Egress: "false"
+      CidrBlock: "0.0.0.0/0" 
+      PortRange:
+        From: '1024'
+        To: '65535'
+  OutboundHttpACLP:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkACL
+      RuleNumber: '100'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: '80'
+        To: '80'
+  OutboundHttpsACLP:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkACL
+      RuleNumber: '200'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: '443'
+        To: '443'
+  OutboundSshACLP:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkACL
+      RuleNumber: '300'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "true"
+      CidrBlock: !Ref VpcCidr
+      PortRange:
+        From: '22'
+        To: '22'
+  OutboundEphACLP:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkACL
+      RuleNumber: '400'
+      Protocol: "6"
+      RuleAction: "allow"
+      Egress: "true"
+      CidrBlock: !Ref VpcCidr
+      PortRange:
+        From: '1024'
+        To: '65535'
+  OutboundEphACLUdpP:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkACL
+      RuleNumber: '410'
+      Protocol: "17"
+      RuleAction: "allow"
+      Egress: "true"
+      CidrBlock: !Ref VpcCidr
+      PortRange:
+        From: '1024'
+        To: '65535'
