@@ -1,0 +1,187 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Web App (desired:1) Auto Scaling group for testing
+Parameters:
+  AWSRegion: 
+    Description: AWS Region for stack creation
+    Type: String
+    AllowedValues:
+      - us-east-1
+      - us-east-2
+      - us-west-1
+      - us-west-2
+    ConstraintDescription: This stack can only be created in these regions us-east-1, us-east-2, us-west-1 and us-west-2.
+    Default: us-east-1
+  WebAppInstanceType:
+    Description: Bastion EC2 instance type.
+    Type: String
+    AllowedValues:
+      - t1.micro
+      - t2.micro
+    ConstraintDescription: Must be a valid Amazon EC2 instance type free tier eligible.
+    Default: t2.micro
+  EnvironmentType: 
+    Description: The environment type
+    Type: String
+    Default: test
+    AllowedValues: 
+      - dev
+      - test
+      - prod
+    ConstraintDescription: must be a development (dev), test or production (prod)
+  EC2KeyName:
+    Description: Name of an EC2 KeyPair. Your bastion & Web instances will launch with this KeyPair.
+    Type: AWS::EC2::KeyPair::KeyName
+    AllowedPattern: ^([a-zA-Z0-9 @.`~!#$%^&*()_+,\\-])*$
+    ConstraintDescription: Must be letters (upper or lower), numbers, and special characters.
+  Subnets:
+    Description: "Comma-delimited list of subnets" 
+    Type: CommaDelimitedList
+  WebAppAsgMax:
+    Description: Specifies the maximum number of EC2 instances in the Web Autoscaling Group.
+    Type: String
+    AllowedPattern: ^((?!0$)[1-2]?[0-9]|30)$
+    ConstraintDescription: Must be a number between 1 and 30.
+    Default: "1"
+  WebAppAsgMin:
+    Description: Specifies the minimum number of EC2 instances in the Web Autoscaling Group.
+    Type: String
+    AllowedPattern: ^([0-0]?[0-9]|10)$
+    ConstraintDescription: Must be a number between 0 and 10.
+    Default: "0"
+  WebAppSecurityGroup:
+    Description: Select the web security group.
+    Type: AWS::EC2::SecurityGroup::Id
+  # ApplicationTargetGroup:
+  #   Description: ELB TargetGroup.
+  #   Type: String
+  AzsMap:
+    Type: String
+  # S3BucketName:
+  #   Description: S3 Vpc Gateway Endpoint
+  #   Type: String
+  #   Default: cfn-803394216630-bucket
+Conditions:
+  UseTestCondition:
+    !Equals [!Ref EnvironmentType, test]
+  UseDevelopmentCondition:
+    !Equals [!Ref EnvironmentType, dev]
+  UseProductionCondition:
+    !Equals [!Ref EnvironmentType, prod]
+  AZ0Private: 
+    !Equals [!Select [0, !Split [",", !Ref AzsMap]], 1]  
+  AZ1Private: 
+    !Equals [!Select [1, !Split [",", !Ref AzsMap]], 2]  
+  AZ2Private: 
+    !Equals [!Select [2, !Split [",", !Ref AzsMap]], 3] 
+  AZ3Private: 
+    !Equals [!Select [3, !Split [",", !Ref AzsMap]], 4] 
+  AZ4Private: 
+    !Equals [!Select [4, !Split [",", !Ref AzsMap]], 5] 
+  AZ5Private: 
+    !Equals [!Select [5, !Split [",", !Ref AzsMap]], 6] 
+  SubnetsAvailable:
+    !Not [!Equals [!Join ['', !Ref Subnets], '']]
+Mappings:
+# AMI - Software configuration (operating system, application server, and applications)
+# Must be free tier eligible
+  RegionMap:
+    us-east-1:
+      test: ami-0c4f7023847b90238 # Ubuntu Server 20.04 LTS (HVM), SSD Volume Type (64-bit (x86))
+      dev: ami-09d56f8956ab235b3 # Ubuntu Server 22.04 LTS (HVM), SSD Volume Type (64-bit (x86))
+      prod: ami-0022f774911c1d690 # Amazon Linux 2 AMI (HVM) - Kernel 5.10, SSD Volume Type (64-bit (x86))
+    us-east-2:
+      test: ami-0eea504f45ef7a8f7 # Ubuntu Server 20.04 LTS (HVM), SSD Volume Type (64-bit (x86))
+      dev: ami-0aeb7c931a5a61206 # Ubuntu Server 22.04 LTS (HVM), SSD Volume Type (64-bit (x86))
+      prod: ami-0fa49cc9dc8d62c84 # Amazon Linux 2 AMI (HVM) - Kernel 5.10, SSD Volume Type (64-bit (x86))
+Resources:
+  WebAppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: '/'
+      Roles:
+      - !Ref WebAppInstanceRole
+  WebAppInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: '/'
+      Policies:
+      - PolicyName: logs
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - logs:DescribeLogStreams
+            Resource:
+            - arn:aws:logs:*:*:*
+  WebAppAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Condition: SubnetsAvailable
+    Properties:
+      Cooldown: 60
+      HealthCheckGracePeriod: 120
+      HealthCheckType: EC2
+      LaunchConfigurationName: 
+        !If
+          [ UseDevelopmentCondition,
+          !Ref WebAppDevConfiguration,
+          !If
+            [ UseProductionCondition,
+            !Ref WebAppProdConfiguration,
+            !Ref WebAppTestConfiguration
+            ]          
+          ]
+      MaxSize: !Ref WebAppAsgMax
+      MinSize: !Ref WebAppAsgMin
+      DesiredCapacity: 1
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'WebApp/', !Ref 'AWS::StackName' ] ]
+          PropagateAtLaunch: true
+      VPCZoneIdentifier:
+        Ref: Subnets
+  WebAppTestConfiguration:
+    Condition: UseTestCondition
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !Ref WebAppInstanceProfile
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', dev ]
+      InstanceMonitoring: true
+      InstanceType: !Ref WebAppInstanceType
+      KeyName: !Ref EC2KeyName
+      SecurityGroups:
+      - !Ref WebAppSecurityGroup
+  WebAppDevConfiguration:
+    Condition: UseDevelopmentCondition
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !Ref WebAppInstanceProfile
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', dev ]
+      InstanceMonitoring: true
+      InstanceType: !Ref WebAppInstanceType
+      KeyName: !Ref EC2KeyName
+      SecurityGroups:
+      - !Ref WebAppSecurityGroup
+  WebAppProdConfiguration:
+    Condition: UseProductionCondition
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !Ref WebAppInstanceProfile
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', prod ]
+      InstanceMonitoring: true
+      InstanceType: !Ref WebAppInstanceType
+      KeyName: !Ref EC2KeyName
+      SecurityGroups:
+      - !Ref WebAppSecurityGroup
