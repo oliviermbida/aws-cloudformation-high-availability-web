@@ -851,3 +851,56 @@ Resources:
       PortRange:
         From: '1024'
         To: '65535'
+# S3 VpcEndpoint
+  S3GatewayEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+            Resource:
+              Fn::Join:
+              - ''
+              - - 'arn:aws:s3:::'
+                - Ref: S3BucketName
+                - '/*'
+      RouteTableIds:
+        - Ref: PublicRouteTable
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcId: !Ref Vpc 
+#
+Outputs:
+  Vpc:
+    Value: !Ref Vpc
+    Export:
+      Name: !Sub "${AWS::StackName}-VpcID"
+  VpcCidr:
+    Value: !Ref VpcCidr
+    Export:
+      Name: !Sub "${AWS::StackName}-VpcCidr"
+  PublicSubnets:
+    Description: Public subnets
+    Value:
+      Fn::Join:
+      - ''
+      - - !If [ AZ0Condition, !Sub '${PublicSubnet0},', ''] 
+        - !If [ AZ1Condition, !Sub '${PublicSubnet1},', '']
+        - !If [ AZ2Condition, !Sub '${PublicSubnet2},', '']
+        - !If [ AZ3Condition, !Sub '${PublicSubnet3},', '']
+        - !If [ AZ4Condition, !Sub '${PublicSubnet4},', '']
+        - !If [ AZ5Condition, !Sub '${PublicSubnet5}', '']
+  PrivateSubnets:
+    Value:
+      Fn::Join:
+      - ''
+      - - !If [ AZ0Condition, !Sub '${PrivateSubnet0},', ''] 
+        - !If [ AZ1Condition, !Sub '${PrivateSubnet1},', '']
+        - !If [ AZ2Condition, !Sub '${PrivateSubnet2},', '']
+        - !If [ AZ3Condition, !Sub '${PrivateSubnet3},', '']
+        - !If [ AZ4Condition, !Sub '${PrivateSubnet4},', '']
+        - !If [ AZ5Condition, !Sub '${PrivateSubnet5}', '']
