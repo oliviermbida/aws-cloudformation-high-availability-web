@@ -114,6 +114,25 @@ Parameters:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
     Default: 10.0.20.0/22
+  securitygroups:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: newvpc
+    Properties:
+      Parameters:
+        SshAccessCidr:
+          Ref: SshAccessCidr
+        Vpc:
+          Fn::GetAtt:
+          - newvpc
+          - Outputs.Vpc
+        VpcCidr:
+          Fn::GetAtt:
+          - newvpc
+          - Outputs.VpcCidr
+      Tags:
+      - Key: Name
+        Value: network-securitygroups
+      TemplateURL: network_sgs.yaml
   newvpc:
     Type: AWS::CloudFormation::Stack
     Properties:

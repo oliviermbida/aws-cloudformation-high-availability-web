@@ -116,6 +116,25 @@ Parameters:
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
     Default: 10.0.20.0/22
 Resources:
+  securitygroups:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: newvpc
+    Properties:
+      Parameters:
+        SshAccessCidr:
+          Ref: SshAccessCidr
+        Vpc:
+          Fn::GetAtt:
+          - newvpc
+          - Outputs.Vpc
+        VpcCidr:
+          Fn::GetAtt:
+          - newvpc
+          - Outputs.VpcCidr
+      Tags:
+      - Key: Name
+        Value: network-securitygroups
+      TemplateURL: https://s3.us-east-1.amazonaws.com/cli-803394216630-bucket/e9a2629e6a8ed5ccfa87c8a1ae794adb.template
   newvpc:
     Type: AWS::CloudFormation::Stack
     Properties:
