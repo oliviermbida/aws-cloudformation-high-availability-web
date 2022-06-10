@@ -54,6 +54,8 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
 
         `./create.sh $(stackName) $(stack-template) $(stack-parameter-file) $(changeSetName) UPDATE`
 
+        ![Network Vpc stack](/docs/images/network_vpc.png)
+
 
 
 
