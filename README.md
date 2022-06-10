@@ -55,7 +55,7 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
 
         `./create.sh $(stackName) $(stack-template) $(stack-parameter-file) $(changeSetName) UPDATE`
 
-        ![Network Vpc stack](/docs/images/network_vpc.png)
+    ![Network Vpc stack image](/docs/images/network_vpc.png)
 
 - Lets do our first tests to verify that the resources in the public and private subnets have access to the internet through Http port 80 via routing to Nat gateways and the Internet gateway. Secondly I will also check that the S3 Vpc endpoint is working by downloading from a bucket while in private subnets.
     - To do this I will ssh into a Bastion (EC2 instance) in public subnets and get access to a test EC2 instance launched in private subnets.
