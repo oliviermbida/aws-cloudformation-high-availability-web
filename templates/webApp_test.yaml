@@ -173,7 +173,7 @@ Resources:
             mkdir -p /opt/aws/bin
             wget https://${S3BucketName}.s3.amazonaws.com/aws-cfn-bootstrap-py3-latest.tar.gz
             python3 -m easy_install --script-dir /opt/aws/bin aws-cfn-bootstrap-py3-latest.tar.gz
-            /opt/aws/bin/cfn-init --configsets deploy_webAppserver -v --stack ${AWS::StackName} --resource WebAppTestConfiguration --region ${AWS::Region}
+
   WebAppDevConfiguration:
     Condition: UseDevelopmentCondition
     Type: AWS::AutoScaling::LaunchConfiguration
