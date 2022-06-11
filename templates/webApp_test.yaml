@@ -56,10 +56,10 @@ Parameters:
   #   Type: String
   AzsMap:
     Type: String
-  # S3BucketName:
-  #   Description: S3 Vpc Gateway Endpoint
-  #   Type: String
-  #   Default: cfn-803394216630-bucket
+  S3BucketName:
+    Description: S3 Vpc Gateway Endpoint
+    Type: String
+    Default: cfn-803394216630-bucket
 Conditions:
   UseTestCondition:
     !Equals [!Ref EnvironmentType, test]
@@ -157,12 +157,23 @@ Resources:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
       IamInstanceProfile: !Ref WebAppInstanceProfile
-      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', dev ]
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', test ]
       InstanceMonitoring: true
       InstanceType: !Ref WebAppInstanceType
       KeyName: !Ref EC2KeyName
       SecurityGroups:
       - !Ref WebAppSecurityGroup
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -xe
+            apt-get update -y
+            apt-get install -y apache2
+            apt-get install -y python3-setuptools
+            mkdir -p /opt/aws/bin
+            wget https://${S3BucketName}.s3.amazonaws.com/aws-cfn-bootstrap-py3-latest.tar.gz
+            python3 -m easy_install --script-dir /opt/aws/bin aws-cfn-bootstrap-py3-latest.tar.gz
+            /opt/aws/bin/cfn-init --configsets deploy_webAppserver -v --stack ${AWS::StackName} --resource WebAppTestConfiguration --region ${AWS::Region}
   WebAppDevConfiguration:
     Condition: UseDevelopmentCondition
     Type: AWS::AutoScaling::LaunchConfiguration
