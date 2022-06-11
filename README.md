@@ -13,6 +13,42 @@ In this project, I will build the infrastructure to host a high availability web
 6. A Vpc endpoint gateway to an S3 bucket service. Web application servers access to the service from private subnets are routed to this gateway endpoint to avoid the Nat gateways charges.
 7. Optional cloudfront distribution to serve the web application.
 ## Solution details
+
+If you do not want to follow the solution steps below, you can deploy the cloudformation stacks with your-stack-name and your-parameters using your-s3-bucket in the command:
+
+    `make deploy stack-name=your-stack-name parameters=your-parameters s3-bucket=your-s3-bucket`
+
+A sample parameters template stacks_param.json is provided in the templates folder.
+
+If you want to update any of the stack templates :
+
+    - network_vpc.yaml
+    - network_sgs.yaml
+    - webApp_Asg.yaml
+    - webApp_Alb.yaml
+    - webApp_cdn.yaml
+    - webApp_r53.yaml
+
+You can package using your-s3-bucket and the output is ./templates/stacks-packaged.yaml before deploying:
+
+    `make package s3-bucket=your-s3-bucket`
+
+Alternatively the workflow uses the top level stack template stacks.yaml for updates using your-change-set:
+
+    `make update stack-name=your-stack-name parameters=your-parameters changes=your-change-set`
+
+Or first use the workflow to create your-stack-name with your-parameters and your-change-set:
+
+    `./scripts/create.sh your-stack-name your-parameters your-change-set`
+
+Don't forget to teardown any resources if not required.
+
+    `make clean stack-name=your-stack-name`
+
+Please note that this command will delete all resources created with the top level stack stacks.yaml unless you've added your own resource retention policies.
+
+These commands assume that you have installed and configured AWS CLI with your account details.
+
 - Prerequisites:
     - Amazon AWS Account
     - AWS CLI v2
