@@ -89,7 +89,7 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
 
     At each stage a simple command will add the pieces:
 
-        `./create.sh $(stackName) $(stack-template) $(stack-parameter-file) $(changeSetName) UPDATE`
+        `make update stack-name=your-stack-name parameters=your-parameters changes=your-change-set`
 
     ![Network Vpc stack image](/docs/images/network_vpc.png)
 
