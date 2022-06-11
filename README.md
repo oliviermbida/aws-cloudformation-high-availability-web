@@ -90,11 +90,28 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
     The S3 Vpc endpoint added a route to the specified route table to direct any S3 prefix list traffic (ip addresses) to the Vpc gateway endpoint not through the Nat gateway or Internet gateway. This can save the costs of using Nat gateways.
 
 
-    ![Network http80 test image](/docs/images/test_network_http80.png)
+    ![Network http80 test ](/docs/images/webApp_test_http80.png)
 
-    ![Network vpce test image](/docs/images/test_network_vpce.png)
+    ![Network vpce test ](/docs/images/test_network_vpce.png)
+
+    Other tests screenshots are in (/docs/images/)
 
 ## Web Application 
+- Following the success in testing a bastion and a test web app auto scaling group in private subnet, I will now add a UserData script to the web App to launch an apache2 web server and I will also download cfn-init file from an S3 bucket.
+
+         `UserData:
+            Fn::Base64:
+            !Sub |
+                #!/bin/bash -xe
+                apt-get update -y
+                apt-get install -y apache2
+                apt-get install -y python3-setuptools
+                mkdir -p /opt/aws/bin
+                wget https://${S3BucketName}.s3.amazonaws.com/aws-cfn-bootstrap-py3-latest.tar.gz
+                python3 -m easy_install --script-dir /opt/aws/bin aws-cfn-bootstrap-py3-latest.tar.gz`
+
+Please note that I am using an AMI with Ubuntu Server 20.04 LTS for testing.
+
 
 ## Testing
 
