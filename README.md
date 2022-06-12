@@ -140,20 +140,101 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
     [Other tests screenshots](/docs/images/)
 
 ## Web Application 
-- Following the success in testing a bastion and a test web app auto scaling group in private subnet, I will now add a UserData script to the web App to launch an apache2 web server and I will also download cfn-init file from an S3 bucket.
+- Following the success in testing a bastion and a test web app auto scaling group in private subnet, I will now add a UserData script to the web App to launch an apache2 web server and I will also download webApp files from an S3 bucket.
 
          `UserData:
             Fn::Base64:
             !Sub |
+                Content-Type: multipart/mixed; boundary="//"
+                MIME-Version: 1.0
+
+                --//
+                Content-Type: text/cloud-config; charset="us-ascii"
+                MIME-Version: 1.0
+                Content-Transfer-Encoding: 7bit
+                Content-Disposition: attachment; filename="cloud-config.txt"
+
+                #cloud-config
+                cloud_final_modules:
+                - [scripts-user, always]
+
+                --//
+                Content-Type: text/x-shellscript; charset="us-ascii"
+                MIME-Version: 1.0
+                Content-Transfer-Encoding: 7bit
+                Content-Disposition: attachment; filename="userdata.txt"
                 #!/bin/bash -xe
                 apt-get update -y
                 apt-get install -y apache2
-                apt-get install -y python3-setuptools
-                mkdir -p /opt/aws/bin
-                wget https://${S3BucketName}.s3.amazonaws.com/aws-cfn-bootstrap-py3-latest.tar.gz
-                python3 -m easy_install --script-dir /opt/aws/bin aws-cfn-bootstrap-py3-latest.tar.gz`
+                touch /etc/apache2/sites-available/webapp.conf
+                echo 'ServerName 127.0.0.1:80' >> /etc/apache2/sites-available/webapp.conf
+                echo 'DocumentRoot /var/www/webapp' >> /etc/apache2/sites-available/webapp.conf
+                echo '<Directory /var/www/webapp>' >> /etc/apache2/sites-available/webapp.conf
+                echo '  Options Indexes FollowSymLinks' >> /etc/apache2/sites-available/webapp.conf
+                echo '  AllowOverride All' >> /etc/apache2/sites-available/webapp.conf
+                echo '  Require all granted' >> /etc/apache2/sites-available/webapp.conf
+                echo '</Directory>' >> /etc/apache2/sites-available/webapp.conf
+                cd /tmp/
+                wget https://${S3BucketName}.s3.amazonaws.com/webApp/files.txt  
+                wget -i files.txt -P /var/www/webapp          
+                a2ensite webapp
+                a2dissite 000-default
+                systemctl reload apache2
+                --//--`
 
 Please note that I am using an AMI with Ubuntu Server 20.04 LTS for testing.
+
+    - ${S3BucketName} Policy (needed for wget to download the S3 bucket folder webApp)
+        `{
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "AllowObjectDownloadRoot",
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": "s3:GetObject",
+                    "Resource": "arn:aws:s3:::${S3BucketName}/*"
+                },
+                {
+                    "Sid": "AllowListFolders",
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": "s3:ListBucket",
+                    "Resource": "arn:aws:s3:::${S3BucketName}",
+                    "Condition": {
+                        "StringEquals": {
+                            "s3:delimiter": "/",
+                            "s3:prefix": [
+                                "",
+                                "webApp"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "Sid": "AllowListFolderFiles",
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": "s3:ListBucket",
+                    "Resource": "arn:aws:s3:::${S3BucketName}",
+                    "Condition": {
+                        "StringLike": {
+                            "s3:prefix": "webApp/*"
+                        }
+                    }
+                },
+                {
+                    "Sid": "AllowObjectDownloadFolder",
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": "s3:GetObject",
+                    "Resource": "arn:aws:s3:::${S3BucketName}/webApp/*"
+                }
+            ]
+        }`
+        
+
+- Next I will add the application load balancer to test the apache2 server with a public IP address and update the web app auto scaling group to max: 5 and min: 2. I will also add the security groups for the load balancer.
 
 
 ## Testing
