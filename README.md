@@ -236,6 +236,11 @@ Please note that I am using an AMI with Ubuntu Server 20.04 LTS for testing.
 
 - Next I will add the application load balancer to test the apache2 server with a public IP address and update the web app auto scaling group to max: 5 and min: 2. I will also add the security groups for the load balancer.
 
+    ![Network Alb test ](/docs/images/webApp_test_alb.png)
+
+    ![Network Alb dns ](/docs/images/test_network_alb_dns.png)
+
+    ![Network Alb dns ](/docs/images/test_network_asg.png)
 
 ## Testing
 
