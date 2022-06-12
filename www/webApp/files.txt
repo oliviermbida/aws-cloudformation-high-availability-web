@@ -1,0 +1,6 @@
+https://cfn-803394216630-bucket.s3.amazonaws.com/webApp/cfn_arch.jpeg
+https://cfn-803394216630-bucket.s3.amazonaws.com/webApp/index.html
+https://cfn-803394216630-bucket.s3.amazonaws.com/webApp/main.css
+https://cfn-803394216630-bucket.s3.amazonaws.com/webApp/app.js
+
+

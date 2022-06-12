@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High Availability web App</title>
+    <link rel="stylesheet" href="main.css">
+</head>
+<body class="light-theme">
+    <div class="content">
+    <h1>Cloud Architecture</h1>
+    <img src="cfn_arch.jpeg" alt="Architecture" width="500" height="333">
+    <p id="msg">It works!</p>
+    <ol>
+      <li>Internet Gateway </li>
+      <li>An Application Load Balancer        
+          <a href="elb_dns">endpoint</a>
+        </li>
+      <li>Network Access Control Lists </li>
+      <li>Nat gateways and Elastic IPs </li>
+      <li>Web application servers run as Auto Scaling Group of EC2 instances </li>
+      <li>Vpc endpoint gateway to an S3 bucket service</li>
+      <li>Optional 
+        <a href="http://cdn.cloudfront.net/">Cloudfront</a>
+         distribution to serve the web application</li>
+      <li>Optional Route53 record set</li>
+    </ol>
+    </div> 
+    <div>
+        <button class="btn">Dark</button>
+    </div>
+    <script src="app.js"></script>
+    <noscript>You need to enable JavaScript to view the full site.</noscript>
+</body>
+</html>
