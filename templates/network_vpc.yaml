@@ -308,6 +308,11 @@ Resources:
       SubnetId: !Ref PublicSubnet5
       RouteTableId: !Ref PublicRouteTable   
 # NAT Gateways & Private subnets routing
+
+# Limitations: Limited by the number of Elastic IPs you can hold per account 
+# It may not be possible to use all the six Availability Zones if they are available
+# In this case you can not deploy and cloudformation will report the account limits
+# Choose a minimum of 2 Availability Zones in a region if they are available in your account for a start.
   NatRouteTable0:
     Condition: AZ0Condition
     Type: AWS::EC2::RouteTable
