@@ -12,13 +12,20 @@ In this project, I will build the infrastructure to host a high availability web
 5. Web application servers run as Auto Scaling Group of EC2 instances in private subnets with a security group.
 6. A Vpc endpoint gateway to an S3 bucket service. Web application servers access to the service from private subnets are routed to this gateway endpoint to avoid the Nat gateways charges.
 7. Optional cloudfront distribution to serve the web application.
+
+## Solution preview
+
+[Application Load Balancer Endpoint](http://cfnst-publi-16ukdq2zg6cqp-79202707.us-east-1.elb.amazonaws.com/)
+
+[Cloudfront Endpoint](http://d1rbo8udt2f2sz.cloudfront.net/)
+
 ## Solution details
 
-If you do not want to follow the solution steps below, you can deploy the cloudformation stacks with your-stack-name and your-parameters using your-s3-bucket in the command:
+If you do not want to follow the solution steps below, you can deploy the cloudformation stacks with *your-stack-name* and *your-parameters* using *your-s3-bucket* in the command:
 
     `make deploy stack-name=your-stack-name parameters=your-parameters s3-bucket=your-s3-bucket`
 
-A sample parameters template stacks_param.json is provided in the templates folder.
+A sample parameters template *stacks_param.json* is provided in the templates folder.
 
 If you want to update any of the stack templates :
 
@@ -29,15 +36,15 @@ If you want to update any of the stack templates :
     - webApp_cdn.yaml
     - webApp_r53.yaml
 
-You can package using your-s3-bucket and the output is ./templates/stacks-packaged.yaml before deploying:
+You can package using *your-s3-*bucket* and the output is *./templates/stacks-packaged.yaml* before deploying:
 
     `make package s3-bucket=your-s3-bucket`
 
-Alternatively the workflow uses the top level stack template stacks.yaml for updates using your-change-set:
+Alternatively the workflow uses the top level stack template *stacks.yaml* for updates using *your-change-set*:
 
     `make update stack-name=your-stack-name parameters=your-parameters changes=your-change-set`
 
-Or first use the workflow to create your-stack-name with your-parameters and your-change-set:
+Or first use the workflow to create *your-stack-name* with *your-parameters* and *your-change-set*:
 
     `./scripts/create.sh your-stack-name your-parameters your-change-set`
 
@@ -45,7 +52,7 @@ Don't forget to teardown any resources if not required.
 
     `make clean stack-name=your-stack-name`
 
-Please note that this command will delete all resources created with the top level stack stacks.yaml unless you've added your own resource retention policies.
+Please note that this command will delete all resources created with the top level stack *stacks.yaml* unless you've added your own resource retention policies.
 
 These commands assume that you have installed and configured AWS CLI with your account details.
 
@@ -67,8 +74,8 @@ These commands assume that you have installed and configured AWS CLI with your a
 - The issue of multi-account [Availability zones mapping](https://aws.amazon.com/premiumsupport/knowledge-center/vpc-map-cross-account-availability-zones/). I will be creating subnets using the AvailabilityZoneId property rather than
 using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-getavailabilityzones.html) to obtain your availabilty zone names which may not match the unique zone Ids in your multi-account.
 - For this reason I will use two matching parameters in my Cloudformation stack creation to deal with this issue. The VpcAzs and AzsMap parameters. It guarantees that the unique Availability Zones Ids are always used even if their Availability Zones names are different in your various account.
-    - VpcAzs parameter is an ordered list of Availability Zones in the form "0,use1-az2,0,use1-az4,0,0" for zones 2 and 4 in the region us-east-1. Zeros inserted as a placeholder for the unused zones. The format is for up to six zones.
-    - AzsMap parameter is a map matching the ordered VpcAzs in the form "0,2,0,4,0,0" to match zones 2 and 4. Zeros inserted as a placeholder for the unused zones. Why another parameter? It is needed to set Conditions to match VpcAzs parameter.
+    - VpcAzs parameter is an ordered list of Availability Zones in the form *["0,use1-az2,0,use1-az4,0,0"]* for zones 2 and 4 in the region us-east-1. Zeros inserted as a placeholder for the unused zones. The format is for up to six zones.
+    - AzsMap parameter is a map matching the ordered VpcAzs in the form *["0,2,0,4,0,0"]* to match zones 2 and 4. Zeros inserted as a placeholder for the unused zones. Why another parameter? It is needed to set Conditions to match VpcAzs parameter.
     - A script Azs.sh is provided to query the Availabilty Zones for any Region. This is used to populate the two parameters. e.g for us-east-1
 
             `aws ec2 describe-availability-zones --region us-east-1 --query "AvailabilityZones[?GroupName=='us-east-1'].ZoneId"`
@@ -78,7 +85,7 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
 - The Cloudformation templates to build the layers of the network are in:
     - network_vpc.yaml
 
-    Through a granular approach using change sets I will add the pieces in the network_vpc.yaml template.
+    Through a granular approach using change sets I will add the pieces in the *network_vpc.yaml* template.
 
     - Vpc
     - Subnets
@@ -130,7 +137,7 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
 
     ![Network vpce test ](/docs/images/test_network_vpce.png)
 
-    Other tests screenshots are in (/docs/images/)
+    [Other tests screenshots](/docs/images/)
 
 ## Web Application 
 - Following the success in testing a bastion and a test web app auto scaling group in private subnet, I will now add a UserData script to the web App to launch an apache2 web server and I will also download cfn-init file from an S3 bucket.
