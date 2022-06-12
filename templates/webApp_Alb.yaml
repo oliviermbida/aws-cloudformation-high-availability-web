@@ -1,0 +1,44 @@
+  alb: 
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Condition: SubnetsAvailable
+    Properties:
+      Scheme: internet-facing
+      Subnets:
+        Ref: Subnets
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: 60
+      SecurityGroups:
+        - !Ref AlbSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'PublicAlb/', !Ref 'AWS::StackName' ] ]
+  albTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: alb
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      Port: 80
+      Protocol: HTTP
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'PublicAlbTarget/', !Ref 'AWS::StackName' ] ]
+      UnhealthyThresholdCount: 5
+      VpcId: !Ref Vpc
+Outputs:
+  PublicAlbTargetGroupArn:
+    Value:
+      !Ref albTargetGroup
+  PublicAlbCanonicalHostedZoneId:
+    Value:
+      !GetAtt alb.CanonicalHostedZoneID
+  PublicAlbDnsName:
+    Value:
+      !GetAtt alb.DNSName
+  PublicAlbFullName:
+    Value:
+      !GetAtt alb.LoadBalancerFullName
+  PublicAlbHostname:
+    Value:
+      !Join [ '', [ 'http://', !GetAtt alb.DNSName ] ]
