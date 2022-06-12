@@ -194,8 +194,8 @@ Parameters:
           - Outputs.PrivateSubnets
         AzsMap: 
           Ref: AzsMap
-        # S3BucketName:
-        #   Ref: S3BucketName
+        S3BucketName:
+          Ref: S3BucketName
       Tags:
       - Key: Name
         Value: webApp-test
