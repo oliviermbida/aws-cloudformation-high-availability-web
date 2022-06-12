@@ -41,19 +41,22 @@ Parameters:
     Type: String
     AllowedPattern: ^((?!0$)[1-2]?[0-9]|30)$
     ConstraintDescription: Must be a number between 1 and 30.
-    Default: "1"
+    Default: "5"
   WebAppAsgMin:
     Description: Specifies the minimum number of EC2 instances in the Web Autoscaling Group.
     Type: String
     AllowedPattern: ^([0-0]?[0-9]|10)$
     ConstraintDescription: Must be a number between 0 and 10.
-    Default: "0"
+    Default: "2"
   WebAppSecurityGroup:
     Description: Select the web security group.
     Type: AWS::EC2::SecurityGroup::Id
-  # ApplicationTargetGroup:
-  #   Description: ELB TargetGroup.
-  #   Type: String
+  ApplicationTargetGroup:
+    Description: ELB TargetGroup.
+    Type: String
+  PublicAlbHostname:
+    Description: ELB Hostname.
+    Type: String
   AzsMap:
     Type: String
   S3BucketName:
@@ -145,13 +148,15 @@ Resources:
           ]
       MaxSize: !Ref WebAppAsgMax
       MinSize: !Ref WebAppAsgMin
-      DesiredCapacity: 1
+      DesiredCapacity: !Ref WebAppAsgMin
       Tags:
         - Key: Name
           Value: !Join [ '', [ 'WebApp/', !Ref 'AWS::StackName' ] ]
           PropagateAtLaunch: true
       VPCZoneIdentifier:
         Ref: Subnets
+      TargetGroupARNs:
+        - Ref: ApplicationTargetGroup
   WebAppTestConfiguration:
     Condition: UseTestCondition
     Type: AWS::AutoScaling::LaunchConfiguration
