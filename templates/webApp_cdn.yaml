@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:  CloudFront distribution optional
+Metadata:
+  Authors:
+    Description: Olivier Mbida (olivier.mbida@ai-uavsystems.com)
+Parameters:
+  PublicAlbDnsName:
+    Description: Application load balancer DNS name.
+    Type: String
+Resources:
+  cdn:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Ref 'AWS::StackName'
+        DefaultCacheBehavior:
+          AllowedMethods:
+          - DELETE
+          - GET
+          - HEAD
+          - OPTIONS
+          - PATCH
+          - POST
+          - PUT
+          DefaultTTL: 86400
+          MaxTTL: 31536000
+          MinTTL: 0
+          ForwardedValues:
+            QueryString: true
+            Headers:
+            - '*'
+            Cookies:
+              Forward: all
+          TargetOriginId: alb
+          ViewerProtocolPolicy: allow-all
+          Compress: true
+        Enabled: true
+        Origins:
+        - DomainName: !Ref PublicAlbDnsName
+          Id: alb
+          CustomOriginConfig:
+            OriginProtocolPolicy: http-only
+        PriceClass: PriceClass_100
+Outputs:
+  DnsEndpoint:
+    Value: !GetAtt cdn.DomainName
+  DnsHostname:
+    Value: !Join [ '', [ 'http://', !GetAtt cdn.DomainName ] ]

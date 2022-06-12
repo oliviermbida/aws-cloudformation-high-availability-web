@@ -160,6 +160,24 @@ Parameters:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
     Default: 10.0.20.0/22
+  UseCloudFront:
+    Description: Choose if CloudFront Distribution is to serve the Web application content.
+    Type: String
+    AllowedValues:
+      - true
+      - false
+    Default: true
+  cloudfront:
+    Condition: CloudFrontAvailable
+    Type: AWS::CloudFormation::Stack
+    DependsOn: 
+      - publicalb
+      - webAppAsgTest 
+    Properties:
+      Parameters:
+        PublicAlbDnsName:
+          !GetAtt [ publicalb, Outputs.PublicAlbDnsName ]
+      TemplateURL: webApp_cdn.yaml
   publicalb:
     DependsOn: 
       - newvpc
