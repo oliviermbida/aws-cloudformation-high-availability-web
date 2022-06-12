@@ -238,9 +238,13 @@ Please note that I am using an AMI with Ubuntu Server 20.04 LTS for testing.
 
     ![Network Alb test ](/docs/images/webApp_test_alb.png)
 
-    ![Network Alb dns ](/docs/images/test_network_alb_dns.png)
+    ![Network Alb dns ](/docs/images/webApp_test_alb_dns.png)
 
-    ![Network Alb dns ](/docs/images/test_network_asg.png)
+    ![Network Alb dns ](/docs/images/webApp_test_asg.png)
+
+- Optional Cloudfront
+
+     ![WebApp Cloudfront dns ](/docs/images/webApp_test_cdn.png)
 
 ## Testing
 
