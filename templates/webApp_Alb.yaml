@@ -1,3 +1,36 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Application Load Balancer
+
+Parameters:
+  # AlbAcmCertificate:
+  AlbSecurityGroup:
+    Description: Select the ALB security group.
+    Type: AWS::EC2::SecurityGroup::Id
+  Subnets:
+    Description: Select existing subnets. 
+    Type: CommaDelimitedList
+  Vpc:
+    Description: Select an existing Vpc
+    Type: AWS::EC2::VPC::Id
+Conditions:
+  SubnetsAvailable:
+    !Not [!Equals [!Join ['', !Ref Subnets], '']]
+
+Resources:
+  
+  albListener:
+    Type : AWS::ElasticLoadBalancingV2::Listener
+    DependsOn:
+      - alb
+      - albTargetGroup
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref albTargetGroup
+      LoadBalancerArn: !Ref alb
+      Port: 80
+      Protocol: HTTP
   alb: 
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Condition: SubnetsAvailable
