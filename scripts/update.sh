@@ -3,8 +3,7 @@
 # Author : Olivier Mbida (olivier.mbida@ai-uavsystems.com)
 #
 # Description:
-# You can CREATE a new stack with a change-set and executing it so that the newly created 
-# stack does not remain on a REVIEW_IN_PROGRESS status without any attached template or resources.
+# You can use this script to UPDATE an existing stack with a change-set by specifying the stack Id(ARN).
 #
 # This script follows a workflow as follows:
 #   - Clean up existing files locally and in S3 bucket if they exists.
@@ -22,11 +21,11 @@
 #                   Creates the template [stacks-packaged.yaml] locally which is used to create the change-set.
 # Example Usage:
 #
-# ./create.sh [stack-name] [parameters] \
+# ./update.sh [stack-name] [parameters] \
 # [change-set-name]  
 #
 # Example to create a new template:
-# ./create.sh cfnStacks ../templates/test_param.json test-change
+# ./update.sh cfnStacks ../templates/test_param.json test-change
 #
 # Notes:
 # This scripts does not resolve any errors your CloudFormation templates may have.
@@ -36,4 +35,4 @@
 # Meaning your bucket does not exist.
 ####################################################################################################################
 
-source ./change.sh $1 ../templates/stacks.yaml $2 $3 CREATE
+source ./change.sh $1 ../templates/stacks.yaml $2 $3 UPDATE
