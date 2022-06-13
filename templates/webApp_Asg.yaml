@@ -1,0 +1,476 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: WebApp Auto Scaling group
+Parameters:
+  AWSRegion: 
+    Description: AWS Region for stack creation
+    Type: String
+    AllowedValues:
+      - us-east-1
+      - us-east-2
+      - us-west-1
+      - us-west-2
+    ConstraintDescription: This stack can only be created in these regions us-east-1, us-east-2, us-west-1 and us-west-2.
+    Default: us-east-1
+  WebAppInstanceType:
+    Description: Bastion EC2 instance type.
+    Type: String
+    AllowedValues:
+      - t1.micro
+      - t2.micro
+      - t3.medium
+    ConstraintDescription: Must be a valid Amazon EC2 instance type free tier eligible.
+    Default: t2.micro
+  EnvironmentType: 
+    Description: The environment type
+    Type: String
+    Default: test
+    AllowedValues: 
+      - dev
+      - test
+      - prod
+    ConstraintDescription: must be a development (dev), test or production (prod)
+  EC2KeyName:
+    Description: Name of an EC2 KeyPair. Your bastion & Web instances will launch with this KeyPair.
+    NoEcho: true
+    Type: AWS::EC2::KeyPair::KeyName
+    AllowedPattern: ^([a-zA-Z0-9 @.`~!#$%^&*()_+,\\-])*$
+    ConstraintDescription: Must be letters (upper or lower), numbers, and special characters.
+  Subnets:
+    Description: "Comma-delimited list of subnets" 
+    Type: CommaDelimitedList
+  WebAppAsgMax:
+    Description: Specifies the maximum number of EC2 instances in the Web Autoscaling Group.
+    Type: String
+    AllowedPattern: ^((?!0$)[1-2]?[0-9]|30)$
+    ConstraintDescription: Must be a number between 1 and 30.
+    Default: "4"
+  WebAppAsgMin:
+    Description: Specifies the minimum number of EC2 instances in the Web Autoscaling Group.
+    Type: String
+    AllowedPattern: ^([0-0]?[0-9]|10)$
+    ConstraintDescription: Must be a number between 0 and 10.
+    Default: "2"
+  WebAppSecurityGroup:
+    Description: Select the web security group.
+    Type: AWS::EC2::SecurityGroup::Id
+  ApplicationTargetGroup:
+    Description: ELB TargetGroup.
+    Type: String
+  AzsMap:
+    Type: String
+  S3BucketName:
+    Description: S3 Vpc Gateway Endpoint
+    Type: String
+  PublicAlbHostname:
+    Description: ELB Hostname.
+    Type: String
+#
+Conditions:
+  UseTestCondition:
+    !Equals [!Ref EnvironmentType, test]
+  UseDevelopmentCondition:
+    !Equals [!Ref EnvironmentType, dev]
+  UseProductionCondition:
+    !Equals [!Ref EnvironmentType, prod]
+  AZ0Private: 
+    !Equals [!Select [0, !Split [",", !Ref AzsMap]], 1]  
+  AZ1Private: 
+    !Equals [!Select [1, !Split [",", !Ref AzsMap]], 2]  
+  AZ2Private: 
+    !Equals [!Select [2, !Split [",", !Ref AzsMap]], 3] 
+  AZ3Private: 
+    !Equals [!Select [3, !Split [",", !Ref AzsMap]], 4] 
+  AZ4Private: 
+    !Equals [!Select [4, !Split [",", !Ref AzsMap]], 5] 
+  AZ5Private: 
+    !Equals [!Select [5, !Split [",", !Ref AzsMap]], 6] 
+  SubnetsAvailable:
+    !Not [!Equals [!Join ['', !Ref Subnets], '']]
+  S3BucketAvailable: !Not 
+    - !Equals 
+      - !Ref S3BucketName
+      - ''
+# UdacityProject ---
+  UdacityEnvironment: !And 
+    - !Condition UseProductionCondition
+    - !Condition S3BucketAvailable
+
+#
+Rules:
+# UdacityProject ---
+  UdacityInstanceType:
+    RuleCondition: !Equals 
+      - !Ref EnvironmentType
+      - prod
+    Assertions:
+      - Assert:
+          'Fn::Contains':
+            - - t3.medium
+            - !Ref WebAppInstanceType
+        AssertDescription: 'For Udacity project environment, the instance type must be t3.medium'
+#---
+  testInstanceType:
+    RuleCondition: !Equals 
+      - !Ref EnvironmentType
+      - test
+    Assertions:
+      - Assert:
+          'Fn::Contains':
+            - - t2.micro
+            - !Ref WebAppInstanceType
+        AssertDescription: 'For a test environment, the instance type must be t2.micro'
+
+#
+Mappings:
+# AMI - Software configuration (operating system, application server, and applications)
+# Must be free tier eligible
+  RegionMap:
+    us-east-1:
+      test: ami-0c4f7023847b90238 # Ubuntu Server 20.04 LTS (HVM), SSD Volume Type (64-bit (x86))
+      dev: ami-09d56f8956ab235b3 # Ubuntu Server 22.04 LTS (HVM), SSD Volume Type (64-bit (x86))
+      prod: ami-005de95e8ff495156 # Ubuntu Server 18.04 LTS (HVM), SSD Volume Type (64-bit (x86))
+    us-east-2:
+      test: ami-0eea504f45ef7a8f7 # Ubuntu Server 20.04 LTS (HVM), SSD Volume Type (64-bit (x86))
+      dev: ami-0aeb7c931a5a61206 # Ubuntu Server 22.04 LTS (HVM), SSD Volume Type (64-bit (x86))
+      prod: ami-005de95e8ff495156 # Ubuntu Server 18.04 LTS (HVM), SSD Volume Type (64-bit (x86))
+
+#
+Resources:
+# UdacityProject----
+  ProfileWithRolesForOurApp:
+    Type: AWS::IAM::InstanceProfile
+    Condition: UseProductionCondition
+    Properties:
+      Path: '/'
+      Roles:
+      - !Ref UdacityS3ReadOnlyEC2
+  UdacityS3ReadOnlyEC2:
+    Type: AWS::IAM::Role
+    Condition: UseProductionCondition
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: '/'
+      Policies:
+      - PolicyName: PublicRead
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            Resource:
+            - !Sub arn:aws:s3:::${S3BucketName}
+#---
+  WebAppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: '/'
+      Roles:
+      - !Ref WebAppInstanceRole
+  WebAppInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: '/'
+      Policies:
+      - PolicyName: logs
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - logs:DescribeLogStreams
+            Resource:
+            - arn:aws:logs:*:*:*
+#---
+# Auto scaling group
+  WebAppAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Condition: SubnetsAvailable
+    Properties:
+      Cooldown: 60
+      HealthCheckGracePeriod: 120
+      HealthCheckType: ELB
+      LaunchConfigurationName: 
+        !If
+          [ UseDevelopmentCondition,
+          !Ref WebAppDevConfiguration,
+          !If
+            [ UseProductionCondition,
+            !Ref WebAppProdConfiguration,
+            !Ref WebAppTestConfiguration
+            ]          
+          ]
+      MaxSize: !Ref WebAppAsgMax
+      MinSize: !Ref WebAppAsgMin
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [ 'WebApp/', !Ref 'AWS::StackName' ] ]
+          PropagateAtLaunch: true
+      VPCZoneIdentifier:
+        Ref: Subnets
+      TargetGroupARNs:
+        - Ref: ApplicationTargetGroup 
+    # CreationPolicy:
+    #   ResourceSignal:
+    #     Count: !Ref WebAppAsgMin
+    #     Timeout: PT5M
+
+# UdacityProject ---
+  WebAppProdConfiguration:
+    Condition: UdacityEnvironment
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !Ref ProfileWithRolesForOurApp
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', prod ]
+      InstanceMonitoring: true
+      InstanceType: !Ref WebAppInstanceType
+      SecurityGroups:
+      - !Ref WebAppSecurityGroup
+      BlockDeviceMappings: 
+        - DeviceName: /dev/sda1
+          Ebs: 
+            VolumeSize: '15'
+            VolumeType: gp3
+      UserData:
+        Fn::Base64:
+          !Sub |
+            Content-Type: multipart/mixed; boundary="//"
+            MIME-Version: 1.0
+
+            --//
+            Content-Type: text/cloud-config; charset="us-ascii"
+            MIME-Version: 1.0
+            Content-Transfer-Encoding: 7bit
+            Content-Disposition: attachment; filename="cloud-config.txt"
+
+            #cloud-config
+            cloud_final_modules:
+            - [scripts-user, always]
+
+            --//
+            Content-Type: text/x-shellscript; charset="us-ascii"
+            MIME-Version: 1.0
+            Content-Transfer-Encoding: 7bit
+            Content-Disposition: attachment; filename="userdata.txt"
+            #!/bin/bash -xe
+            apt-get update -y
+            apt-get install -y apache2
+            touch /etc/apache2/sites-available/webapp.conf
+            echo 'ServerName 127.0.0.1:80' >> /etc/apache2/sites-available/webapp.conf
+            echo 'DocumentRoot /var/www/webapp' >> /etc/apache2/sites-available/webapp.conf
+            echo '<Directory /var/www/webapp>' >> /etc/apache2/sites-available/webapp.conf
+            echo '  Options Indexes FollowSymLinks' >> /etc/apache2/sites-available/webapp.conf
+            echo '  AllowOverride All' >> /etc/apache2/sites-available/webapp.conf
+            echo '  Require all granted' >> /etc/apache2/sites-available/webapp.conf
+            echo '</Directory>' >> /etc/apache2/sites-available/webapp.conf
+            cd /tmp/
+            wget https://${S3BucketName}.s3.amazonaws.com/webApp/files.txt  
+            wget -i files.txt -P /var/www/webapp          
+            a2ensite webapp
+            a2dissite 000-default
+            systemctl reload apache2
+            --//--
+#---
+# Test
+  WebAppTestConfiguration:
+    Condition: UseTestCondition
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          deploy_webAppserver:
+            - install_and_enable_cfn_hup
+            - configure_webAppserver
+        install_and_enable_cfn_hup:
+          files:
+            /etc/cfn/cfn-hup.conf:
+              content:
+                Fn::Join:
+                - ''
+                - - "[main]\n"
+                  - stack=
+                  - Ref: AWS::StackId
+                  - "\n"
+                  - region=
+                  - Ref: AWS::Region
+                  - "\n"
+              mode: '000400'
+              owner: root
+              group: root
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content:
+                Fn::Join:
+                - ''
+                - - "[cfn-auto-reloader-hook]\n"
+                  - 'triggers=post.update
+                    '
+                  - 'path=Resources.WebAppTestConfiguration.Metadata.AWS::CloudFormation::Init
+                    '
+                  - 'action=/opt/aws/bin/cfn-init -v '
+                  - "         --stack "
+                  - Ref: AWS::StackName
+                  - "         --resource WebAppTestConfiguration "
+                  - "         --configsets deploy_webAppserver "
+                  - "         --region "
+                  - Ref: AWS::Region
+                  - "\n"
+                  - 'runas=root
+                    '
+            /lib/systemd/system/cfn-hup.service:
+              content:
+                Fn::Join:
+                - ''
+                - - "[Unit]\n"
+                  - "Description=cfn-hup daemon\n\n"
+                  - "[Service]\n"
+                  - 'Type=simple
+                    '
+                  - 'ExecStart=/opt/aws/bin/cfn-hup
+                    '
+                  - "Restart=always\n\n"
+                  - "[Install]\n"
+                  - WantedBy=multi-user.target 
+          commands:
+            enable_cfn_hup:
+              command: systemctl enable cfn-hup.service
+            start_cfn_hup:
+              command: systemctl start cfn-hup.service  
+          services:
+            systemd:
+              cfn-hup:
+                enabled: 'true'
+                ensureRunning: 'true'
+                files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf     
+        configure_webAppserver:
+          files:
+            /tmp/create_site_conf.sh:
+              content:
+                !Join [
+                  "",[
+                    "#!/bin/bash -xe\n",
+                    "if [ ! -f /etc/apache2/sites-available/webapp.conf ]; then\n",                    
+                    "   touch /etc/apache2/sites-available/webapp.conf\n",
+                    "   echo 'ServerName 127.0.0.1:80' >> /etc/apache2/sites-available/webapp.conf\n",
+                    "   echo 'DocumentRoot /var/www/webapp' >> /etc/apache2/sites-available/webapp.conf\n",
+                    "   echo '<Directory /var/www/webapp>' >> /etc/apache2/sites-available/webapp.conf\n",
+                    "   echo '  Options Indexes FollowSymLinks' >> /etc/apache2/sites-available/webapp.conf\n",
+                    "   echo '  AllowOverride All' >> /etc/apache2/sites-available/webapp.conf\n",
+                    "   echo '  Require all granted' >> /etc/apache2/sites-available/webapp.conf\n",
+                    "   echo '</Directory>' >> /etc/apache2/sites-available/webapp.conf\n",
+                    "fi\n",
+                    "touch /var/www/webapp\n",
+                    "echo -e '<html>\n<html>\n\t<body>\n\t\t<h1>Hello World!</h1>\n\t</body>\n</html>' >>  /var/www/webapp/index.html\n"
+                  ]
+                ]
+              mode: 000500
+              owner: root
+              group: root
+          commands:
+            create_site_conf:
+              command: ./create_site_conf.sh
+              cwd: /tmp
+              ignoreErrors: false
+            enable_apache2:
+              command: systemctl enable apache2.service
+            start_apache2:
+              command: systemctl start apache2.service 
+            start_webapp:
+              command: a2ensite webapp
+            disable_default:
+              command: a2dissite 000-default
+            reload_apache2:
+              command: systemctl reload apache2               
+    Properties:
+      IamInstanceProfile: !Ref WebAppInstanceProfile
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', test ]
+      InstanceMonitoring: true
+      InstanceType: !Ref WebAppInstanceType
+      KeyName: !Ref EC2KeyName
+      SecurityGroups:
+      - !Ref WebAppSecurityGroup
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -xe
+            apt-get update -y
+            apt-get install -y apache2
+            apt install -y python3.9
+            mkdir -p /opt/aws/bin
+            wget https://${S3BucketName}.s3.amazonaws.com/aws-cfn-bootstrap-py3-latest.tar.gz
+            python3 -m easy_install --script-dir /opt/aws/bin aws-cfn-bootstrap-py3-latest.tar.gz
+            ln -s /usr/local/lib/python3.9/dist-packages/aws_cfn_bootstrap-2.0-py3.9.egg/init/ubuntu/cfn-hup /etc/init.d/cfn-hup
+            update-rc.d cfn-hup defaults
+            /opt/aws/bin/cfn-init --configSets deploy_webAppserver -v --stack ${AWS::StackName} --resource WebAppTestConfiguration --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource WebAppAutoScalingGroup --region ${AWS::Region}
+# Dev
+  WebAppDevConfiguration:
+    Condition: UseDevelopmentCondition
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !Ref WebAppInstanceProfile
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', dev ]
+      InstanceMonitoring: true
+      InstanceType: !Ref WebAppInstanceType
+      SecurityGroups:
+      - !Ref WebAppSecurityGroup
+      UserData:
+        Fn::Base64:
+          !Sub |
+            Content-Type: multipart/mixed; boundary="//"
+            MIME-Version: 1.0
+
+            --//
+            Content-Type: text/cloud-config; charset="us-ascii"
+            MIME-Version: 1.0
+            Content-Transfer-Encoding: 7bit
+            Content-Disposition: attachment; filename="cloud-config.txt"
+
+            #cloud-config
+            cloud_final_modules:
+            - [scripts-user, always]
+
+            --//
+            Content-Type: text/x-shellscript; charset="us-ascii"
+            MIME-Version: 1.0
+            Content-Transfer-Encoding: 7bit
+            Content-Disposition: attachment; filename="userdata.txt"
+            #!/bin/bash -xe
+            apt-get update -y
+            apt-get install -y apache2
+            touch /etc/apache2/sites-available/webapp.conf
+            echo 'ServerName 127.0.0.1:80' >> /etc/apache2/sites-available/webapp.conf
+            echo 'DocumentRoot /var/www/webapp' >> /etc/apache2/sites-available/webapp.conf
+            echo '<Directory /var/www/webapp>' >> /etc/apache2/sites-available/webapp.conf
+            echo '  Options Indexes FollowSymLinks' >> /etc/apache2/sites-available/webapp.conf
+            echo '  AllowOverride All' >> /etc/apache2/sites-available/webapp.conf
+            echo '  Require all granted' >> /etc/apache2/sites-available/webapp.conf
+            echo '</Directory>' >> /etc/apache2/sites-available/webapp.conf
+            cd /tmp/
+            wget https://${S3BucketName}.s3.amazonaws.com/webApp/files.txt  
+            wget -i files.txt -P /var/www/webapp          
+            a2ensite webapp
+            a2dissite 000-default
+            systemctl reload apache2
+            --//--
