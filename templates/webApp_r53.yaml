@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Route 53 record set optional
+Parameters:
+
+  dns:
+    AllowedPattern: ^(?!http)(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$
+    Description: The DNS endpoint - CloudFront DNS if using CloudFront else Public Alb DNS name.
+    Type: String
+  dnsId:
+    AllowedPattern: ^[A-Z0-9]{14}$
+    Description: The DNS host zone id - 'Z2FDTNDATAQYW2' if using CloudFront else Public Alb host zone id.
+    Type: String
+  domainName:
+    AllowedPattern: ^(?!http)(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$
+    Description: The main domain name of the web application site (e.g. example.com).
+    Type: String
+
+Resources:
+
+  RecordSet:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: !Join ['', [!Ref domainName, '.']]
+      RecordSets:
+      - Name: !Join ['', ['www.', !Ref domainName, '.']]
+        Type: A
+        AliasTarget:
+          DNSName: !Ref dns
+          EvaluateTargetHealth: True
+          HostedZoneId: !Ref dnsId

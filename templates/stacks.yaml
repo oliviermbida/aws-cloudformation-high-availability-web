@@ -40,7 +40,6 @@ Parameters:
   S3BucketName:
     Description: S3 bucket name for Vpc Gateway Endpoint
     Type: String
-    Default: cfn-803394216630-bucket
   SshAccessCidr:
     Description: The CIDR IP range that is permitted to SSH to bastion instance. Note
       - a value of 0.0.0.0/0 will allow access from ANY IP address.
@@ -74,6 +73,7 @@ Parameters:
     AllowedValues:
       - t1.micro
       - t2.micro
+      - t3.medium
     ConstraintDescription: Must be a valid Amazon EC2 instance type free tier eligible.
     Default: t2.micro
   WebAppAsgMax:
@@ -167,12 +167,46 @@ Parameters:
       - true
       - false
     Default: true
+  UseRoute53:
+    Description: Choose if Route53 Distribution is to serve the Web application content.
+    Type: String
+    AllowedValues:
+      - true
+      - false
+    Default: false
+  DomainName:
+    AllowedPattern: ^$|(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$
+    Description: '[ Optional ] The main domain name of the web application site (e.g. example.com).'
+    Type: String
+    Default: "example.com"
+Conditions:
+  CloudFrontAvailable:
+    !Equals [ !Ref UseCloudFront, true ]
+  Route53Available:
+    !Equals [ !Ref UseRoute53, true ]
+
+Resources:
+  route53:
+    Condition: Route53Available
+    DependsOn: 
+      - publicalb
+      - webAppAsg 
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        DnsEndpoint:
+          !If [ CloudFrontAvailable, !GetAtt [ cloudfront, Outputs.DnsEndpoint ], !GetAtt [ publicalb, Outputs.PublicAlbDnsName ] ]
+        DnsHostId:
+          !If [ CloudFrontAvailable, 'Z2FDTNDATAQYW2', !GetAtt [ publicalb, Outputs.PublicAlbCanonicalHostedZoneId ] ]
+        DomainName:
+          !Ref DomainName
+      TemplateURL: webApp_r53.yaml
   cloudfront:
     Condition: CloudFrontAvailable
     Type: AWS::CloudFormation::Stack
     DependsOn: 
       - publicalb
-      - webAppAsgTest 
+      - webAppAsg 
     Properties:
       Parameters:
         PublicAlbDnsName:
@@ -201,7 +235,7 @@ Parameters:
       - Key: Name
         Value: webApp-Alb
       TemplateURL: webApp_Alb.yaml
-  webAppAsgTest:
+  webAppAsg:
     Type: AWS::CloudFormation::Stack
     DependsOn: 
       - newvpc
@@ -243,8 +277,8 @@ Parameters:
           Ref: S3BucketName
       Tags:
       - Key: Name
-        Value: webApp-test
-      TemplateURL: webApp_test.yaml
+        Value: webApp-Asg
+      TemplateURL: webApp_Asg.yaml
   bastion:
     Type: AWS::CloudFormation::Stack
     DependsOn: 
