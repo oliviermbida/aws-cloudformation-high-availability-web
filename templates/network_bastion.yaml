@@ -54,7 +54,8 @@ Parameters:
     Type: AWS::EC2::SecurityGroup::Id
   AzsMap: 
     Type: String
-# Validate parameters
+
+
 Rules:
   testInstanceType:
     RuleCondition: !Equals 
@@ -87,7 +88,6 @@ Rules:
             - !Ref BastionInstanceType
         AssertDescription: 'For a production environment, the instance type must be t2.micro'
 
-
 # AMI - Software configuration (operating system, application server, and applications)
 # Must be free tier eligible
 Mappings:
@@ -96,11 +96,11 @@ Mappings:
     us-east-1:
       dev: ami-0c4f7023847b90238 # Ubuntu Server 20.04 LTS (HVM), SSD Volume Type (64-bit (x86))
       test: ami-09d56f8956ab235b3 # Ubuntu Server 22.04 LTS (HVM), SSD Volume Type (64-bit (x86))
-      prod: ami-0022f774911c1d690 # Amazon Linux 2 AMI (HVM) - Kernel 5.10, SSD Volume Type (64-bit (x86))
+      prod: ami-005de95e8ff495156 # Ubuntu Server 18.04 LTS (HVM), SSD Volume Type (64-bit (x86))
     us-east-2:
       dev: ami-0eea504f45ef7a8f7 # Ubuntu Server 20.04 LTS (HVM), SSD Volume Type (64-bit (x86))
       test: ami-0aeb7c931a5a61206 # Ubuntu Server 22.04 LTS (HVM), SSD Volume Type (64-bit (x86))
-      prod: ami-0fa49cc9dc8d62c84 # Amazon Linux 2 AMI (HVM) - Kernel 5.10, SSD Volume Type (64-bit (x86))
+      prod: ami-005de95e8ff495156 # Ubuntu Server 18.04 LTS (HVM), SSD Volume Type (64-bit (x86))
 
 Conditions:
   AZ0Public: 
@@ -117,6 +117,10 @@ Conditions:
     !Equals [!Select [5, !Split [",", !Ref AzsMap]], 6]
   SubnetsAvailable:
     !Not [!Equals [!Join ['', !Ref Subnets], '']]
+# UdacityProject ---
+  UdacityEnvironment: 
+    !Equals [!Ref EnvironmentType, prod]
+
 
 Resources:
 
@@ -165,7 +169,11 @@ Resources:
       ImageId: !FindInMap [ RegionMap, !Ref AWSRegion, !Ref EnvironmentType ]
       InstanceMonitoring: true
       InstanceType: !Ref BastionInstanceType
-      KeyName: !Ref EC2KeyName
+      KeyName: 
+        Fn::If:
+        - UdacityEnvironment
+        - Ref: AWS::NoValue
+        - Ref: EC2KeyName
       SecurityGroups:
         - !Ref BastionSecurityGroup
 
