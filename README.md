@@ -11,19 +11,20 @@ In this project, I will build the infrastructure to host a high availability web
 4. Nat gateways and an Elastic IP in public subnets for internet access by web application servers in private subnets.
 5. Web application servers run as Auto Scaling Group of EC2 instances in private subnets with a security group.
 6. A Vpc endpoint gateway to an S3 bucket service. Web application servers access to the service from private subnets are routed to this gateway endpoint to avoid the Nat gateways charges.
-7. Optional cloudfront distribution to serve the web application.
+7. Optional Cloudfront distribution to serve the web application.
+8. Optional Route53 record set for domain (e.g example.com)
 
 ## Solution preview
 
-[Application Load Balancer Endpoint](http://cfnst-publi-16ukdq2zg6cqp-79202707.us-east-1.elb.amazonaws.com/)
+[Application Load Balancer Endpoint](http://cfnStac-alb-1JB8BB95TYWJW-1977568606.us-east-1.elb.amazonaws.com/)
 
-[Cloudfront Endpoint](http://d1rbo8udt2f2sz.cloudfront.net/)
+[Cloudfront Endpoint](http://d1o4y8j8afxlp1.cloudfront.net/)
 
 ## Solution details
 
 If you do not want to follow the solution steps below, you can deploy the cloudformation stacks with *your-stack-name* and *your-parameters* using *your-s3-bucket* in the command:
 
-    `make deploy stack-name=your-stack-name parameters=your-parameters s3-bucket=your-s3-bucket`
+    make deploy stack-name=your-stack-name parameters=your-parameters s3-bucket=your-s3-bucket
 
 A sample parameters template *stacks_param.json* is provided in the templates folder.
 
@@ -36,21 +37,23 @@ If you want to update any of the stack templates :
     - webApp_cdn.yaml
     - webApp_r53.yaml
 
-You can package using *your-s3-*bucket* and the output is *./templates/stacks-packaged.yaml* before deploying:
+You can package using *your-s3-bucket* and the output is *./templates/stacks-packaged.yaml* before deploying:
 
-    `make package s3-bucket=your-s3-bucket`
+    make package s3-bucket=your-s3-bucket
 
 Alternatively the workflow uses the top level stack template *stacks.yaml* for updates using *your-change-set*:
 
-    `make update stack-name=your-stack-name parameters=your-parameters changes=your-change-set`
+    ./scripts/update.sh your-stack-name your-parameters your-change-set
 
 Or first use the workflow to create *your-stack-name* with *your-parameters* and *your-change-set*:
 
-    `./scripts/create.sh your-stack-name your-parameters your-change-set`
+    ./scripts/create.sh your-stack-name your-parameters your-change-
+    
+* Before using update.sh and create.sh , use your-s3-bucket in change.sh
 
 Don't forget to teardown any resources if not required.
 
-    `make clean stack-name=your-stack-name`
+    make clean stack-name=your-stack-name
 
 Please note that this command will delete all resources created with the top level stack *stacks.yaml* unless you've added your own resource retention policies.
 
@@ -59,14 +62,14 @@ These commands assume that you have installed and configured AWS CLI with your a
 - Prerequisites:
     - Amazon AWS Account
     - AWS CLI v2
-    - Create a key pair using Amazon EC2 from AWS CLI
+    - Create a key pair using Amazon EC2 from AWS CLI (use only in Test environment)
 
-        `aws ec2 create-key-pair --key-name my_ec2_key_pair --key-type  ed25519         
-            --key-format pem --query "KeyMaterial" --output text > my_ec2_key_pair.pem`
+        aws ec2 create-key-pair --key-name my_ec2_key_pair --key-type  ed25519         
+            --key-format pem --query "KeyMaterial" --output text > my_ec2_key_pair.pem
     
     - Set the permissions of your key file
 
-    `chmod 400 my_ec2_key_pair.pem`
+    chmod 400 my_ec2_key_pair.pem
 
     - A linux platform
 
@@ -78,7 +81,7 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
     - AzsMap parameter is a map matching the ordered VpcAzs in the form *["0,2,0,4,0,0"]* to match zones 2 and 4. Zeros inserted as a placeholder for the unused zones. Why another parameter? It is needed to set Conditions to match VpcAzs parameter.
     - A script Azs.sh is provided to query the Availabilty Zones for any Region. This is used to populate the two parameters. e.g for us-east-1
 
-            `aws ec2 describe-availability-zones --region us-east-1 --query "AvailabilityZones[?GroupName=='us-east-1'].ZoneId"`
+            aws ec2 describe-availability-zones --region us-east-1 --query "AvailabilityZones[?GroupName=='us-east-1'].ZoneId"
 
 - The workflow I will use is that of creating Cloudformation change sets before updating stacks which is detailed in the script create.sh
 - I will also use a nested or tier stack approach with the top stack template called stacks.yaml
@@ -96,7 +99,7 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
 
     At each stage a simple command will add the pieces:
 
-        `make update stack-name=your-stack-name parameters=your-parameters changes=your-change-set`
+        ./scripts/update.sh your-stack-name your-parameters your-change-set
 
     ![Network Vpc stack image](/docs/images/network_vpc.png)
 
@@ -110,7 +113,7 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
 
     - The command to get into the bastion is something like (for linux):
 
-        ssh -i my_ec2_key_pair -A $(user)@ec2-$(instance_public_ip).compute-1.amazonaws.com
+        ssh -i my_ec2_key_pair -A user@ec2-instance_public_ip.compute-1.amazonaws.com
 
     - Once in the bastion, to test internet:
 
@@ -120,29 +123,29 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
 
     - Next ssh to the EC2 instance (linux) launched in private subnets.
 
-        ssh -i my_ec2_key_pair -A $(user)@$(instance_private_ip)
+        ssh -i my_ec2_key_pair -A user@instance_private_ip
 
-    - Note that my_ec2_key_pair was copied into the bastion (set permission chmod 400 on the key)
-    and use it to get into the ec2 linux instance launched in private subnets.
-    Once there repeat the telnet test on google.com port 80.
+     * Note instance launched with ssh key access use only in test environment.
+
+    - Once there repeat the telnet test on google.com port 80.
 
     - Now get the url of a file in a bucket and download.
 
-        `wget https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz`
+        wget https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz
 
     The S3 Vpc endpoint added a route to the specified route table to direct any S3 prefix list traffic (ip addresses) to the Vpc gateway endpoint not through the Nat gateway or Internet gateway. This can save the costs of using Nat gateways.
 
 
     ![Network http80 test ](/docs/images/webApp_test_http80.png)
 
+
     ![Network vpce test ](/docs/images/test_network_vpce.png)
 
-    [Other tests screenshots](/docs/images/)
 
 ## Web Application 
 - Following the success in testing a bastion and a test web app auto scaling group in private subnet, I will now add a UserData script to the web App to launch an apache2 web server and I will also download webApp files from an S3 bucket.
 
-         `UserData:
+          UserData:
             Fn::Base64:
             !Sub |
                 Content-Type: multipart/mixed; boundary="//"
@@ -180,12 +183,13 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
                 a2ensite webapp
                 a2dissite 000-default
                 systemctl reload apache2
-                --//--`
+                --//--
 
 Please note that I am using an AMI with Ubuntu Server 20.04 LTS for testing.
 
-    - ${S3BucketName} Policy (needed for wget to download the S3 bucket folder webApp)
-        `{
+    - ${S3BucketName} Policy (needed for wget to download the S3 bucket files in webApp folder)
+
+         {
             "Version": "2012-10-17",
             "Statement": [
                 {
@@ -231,7 +235,7 @@ Please note that I am using an AMI with Ubuntu Server 20.04 LTS for testing.
                     "Resource": "arn:aws:s3:::${S3BucketName}/webApp/*"
                 }
             ]
-        }`
+        }
         
 
 - Next I will add the application load balancer to test the apache2 server with a public IP address and update the web app auto scaling group to max: 5 and min: 2. I will also add the security groups for the load balancer.
@@ -246,10 +250,36 @@ Please note that I am using an AMI with Ubuntu Server 20.04 LTS for testing.
 
      ![WebApp Cloudfront dns ](/docs/images/webApp_test_cdn.png)
 
+- Optional Route53 Record set
+
+          RecordSet:
+            Type: AWS::Route53::RecordSetGroup
+            Properties:
+            HostedZoneName: !Join ['', [!Ref domainName, '.']]
+            RecordSets:
+            - Name: !Join ['', ['www.', !Ref domainName, '.']]
+                Type: A
+                AliasTarget:
+                DNSName: !Ref dnsEndpoint
+                EvaluateTargetHealth: True
+                HostedZoneId: !Ref dnsId
+
 ## Testing
 
+- Setup a Load Generator Auto Scaling Group to test the application load balancer
+    test_load.yaml
 
 ## Teardown
 
+- Don't forget to teardown any resources if not required.
+
+    make clean stack-name=your-stack-name
+
+* Please note that this command will delete all resources created with the top level stack *stacks.yaml* unless you've added your own resource retention policies.
 
 ## Credits
+
+- [Regular expressions 101](https://regex101.com/)
+- [WordPress reference architecture](https://github.com/aws-samples/aws-refarch-wordpress)
+- [Troubleshooting cfn-hup](https://stackoverflow.com/questions/48300896/aws-cloudformation-cfn-hup-fails-on-default-start-levels)
+- [Troubleshooting Key Pair issues](https://aws.amazon.com/premiumsupport/knowledge-center/user-data-replace-key-pair-ec2/)
