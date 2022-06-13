@@ -43,6 +43,8 @@ Resources:
         PriceClass: PriceClass_100
 Outputs:
   DnsEndpoint:
+    Description: Cloudfront Endpoint Name 
     Value: !GetAtt cdn.DomainName
   DnsHostname:
+    Description: Cloudfront Host Name
     Value: !Join [ '', [ 'http://', !GetAtt cdn.DomainName ] ]
