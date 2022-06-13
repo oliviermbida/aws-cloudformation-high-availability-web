@@ -47,7 +47,7 @@ Alternatively the workflow uses the top level stack template *stacks.yaml* for u
 
 Or first use the workflow to create *your-stack-name* with *your-parameters* and *your-change-set*:
 
-    ./scripts/create.sh your-stack-name your-parameters your-change-
+    ./scripts/create.sh your-stack-name your-parameters your-change-set
     
 * Before using update.sh and create.sh , use your-s3-bucket in change.sh
 
@@ -83,7 +83,7 @@ using [!GetAZs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/i
 
             aws ec2 describe-availability-zones --region us-east-1 --query "AvailabilityZones[?GroupName=='us-east-1'].ZoneId"
 
-- The workflow I will use is that of creating Cloudformation change sets before updating stacks which is detailed in the script create.sh
+- The workflow I will use is that of creating Cloudformation change sets before updating stacks which is detailed in the script change.sh
 - I will also use a nested or tier stack approach with the top stack template called stacks.yaml
 - The Cloudformation templates to build the layers of the network are in:
     - network_vpc.yaml
