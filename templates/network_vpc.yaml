@@ -881,17 +881,17 @@ Resources:
 #
 Outputs:
   Vpc:
-    Description: !Sub 'VPC in ${AWS::Region}'
+    Description: New VPC
     Value: !Ref Vpc
     Export:
       Name: !Sub "${AWS::StackName}-VpcID"
   VpcCidr:
-    Description: !Sub 'VPC Cidr block in region ${AWS::Region}'
+    Description: VPC Cidr block 
     Value: !Ref VpcCidr
     Export:
       Name: !Sub "${AWS::StackName}-VpcCidr"
   PublicSubnets:
-    Description: !Sub 'Public subnets in zones ${VpcAzs}'
+    Description: Public subnets 
     Value:
       Fn::Join:
       - ''
@@ -902,7 +902,7 @@ Outputs:
         - !If [ AZ4Condition, !Sub '${PublicSubnet4},', '']
         - !If [ AZ5Condition, !Sub '${PublicSubnet5}', '']
   PrivateSubnets:
-    Description: !Sub 'Private subnets in zones ${VpcAzs}'
+    Description: Private subnets
     Value:
       Fn::Join:
       - ''
