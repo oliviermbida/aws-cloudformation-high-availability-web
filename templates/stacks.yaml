@@ -212,6 +212,17 @@ Resources:
         PublicAlbDnsName:
           !GetAtt [ publicalb, Outputs.PublicAlbDnsName ]
       TemplateURL: webApp_cdn.yaml
+  # cloudwatch:
+  #   DependsOn: 
+  #     - newvpc
+  #     - securitygroups
+  #     - publicalb
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     Parameters:
+  #       PublicAlbFullName:
+  #         !GetAtt [ publicalb, Outputs.PublicAlbFullName ]     
+  #     TemplateURL: webApp_dash.yaml
   publicalb:
     DependsOn: 
       - newvpc

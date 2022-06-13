@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:  CloudWatch dashboard
+Metadata:
+  Authors:
+    Description: Olivier Mbida (olivier.mbida@ai-uavsystems.com)
+Parameters:
+  PublicAlbFullName:
+    Description: Amazon ALB Full Name
+    Type: String
+Resources: 
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Join [ '', ['Dashboard / ', !Ref 'AWS::StackName' ] ]
+      DashboardBody:
+        Fn::Join:
+          [ "",
+          [ 
+            '{"widgets": [
+                  {
+                      "type": "metric",
+                      "x": 0,
+                      "y": 12,
+                      "width": 6,
+                      "height": 6,
+                      "properties": {
+                          "view": "timeSeries",
+                          "stacked": false,
+                          "metrics": [
+                              [ "AWS/ApplicationELB", "RequestCount", "LoadBalancer", "',!Ref 'PublicAlbFullName','", { "stat": "Sum", "period": 60 } ]
+                          ],
+                          "region": "',!Ref 'AWS::Region','",
+                          "title": "ALB RequestCount"
+                      }
+                  },
+                  {
+                      "type": "metric",
+                      "x": 6,
+                      "y": 12,
+                      "width": 6,
+                      "height": 6,
+                      "properties": {
+                          "view": "timeSeries",
+                          "stacked": false,
+                          "metrics": [
+                              [ "AWS/ApplicationELB", "ActiveConnectionCount", "LoadBalancer", "',!Ref 'PublicAlbFullName','", { "stat": "Sum", "period": 60 } ]
+                          ],
+                          "region": "',!Ref 'AWS::Region','",
+                          "title": "ALB ActiveConnectionCount"
+                      }
+                  },
+              ]
+            }'
+          ]
+          ]
+        
