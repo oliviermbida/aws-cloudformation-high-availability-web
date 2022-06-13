@@ -41,7 +41,6 @@ Parameters:
   S3BucketName:
     Description: S3 bucket name for Vpc Gateway Endpoint
     Type: String
-    Default: cfn-803394216630-bucket
   SshAccessCidr:
     Description: The CIDR IP range that is permitted to SSH to bastion instance. Note
       - a value of 0.0.0.0/0 will allow access from ANY IP address.
@@ -77,6 +76,7 @@ Parameters:
     AllowedValues:
     - t1.micro
     - t2.micro
+    - t3.medium
     ConstraintDescription: Must be a valid Amazon EC2 instance type free tier eligible.
     Default: t2.micro
   WebAppAsgMax:
@@ -165,7 +165,77 @@ Parameters:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
     Default: 10.0.20.0/22
+  UseCloudFront:
+    Description: Choose if CloudFront Distribution is to serve the Web application
+      content.
+    Type: String
+    AllowedValues:
+    - true
+    - false
+    Default: true
+  UseRoute53:
+    Description: Choose if Route53 Distribution is to serve the Web application content.
+    Type: String
+    AllowedValues:
+    - true
+    - false
+    Default: false
+  DomainName:
+    AllowedPattern: ^$|(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$
+    Description: '[ Optional ] The main domain name of the web application site (e.g.
+      example.com).'
+    Type: String
+    Default: example.com
+Conditions:
+  CloudFrontAvailable:
+    Fn::Equals:
+    - Ref: UseCloudFront
+    - true
+  Route53Available:
+    Fn::Equals:
+    - Ref: UseRoute53
+    - true
 Resources:
+  route53:
+    Condition: Route53Available
+    DependsOn:
+    - publicalb
+    - webAppAsg
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        DnsEndpoint:
+          Fn::If:
+          - CloudFrontAvailable
+          - Fn::GetAtt:
+            - cloudfront
+            - Outputs.DnsEndpoint
+          - Fn::GetAtt:
+            - publicalb
+            - Outputs.PublicAlbDnsName
+        DnsHostId:
+          Fn::If:
+          - CloudFrontAvailable
+          - Z2FDTNDATAQYW2
+          - Fn::GetAtt:
+            - publicalb
+            - Outputs.PublicAlbCanonicalHostedZoneId
+        DomainName:
+          Ref: DomainName
+      TemplateURL: https://s3.us-east-1.amazonaws.com/cli-803394216630-bucket/7adaa786a785d82c567c286fdcd47179.template
+  cloudfront:
+    Condition: CloudFrontAvailable
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - publicalb
+    - webAppAsg
+    Properties:
+      Parameters:
+        PublicAlbDnsName:
+          Fn::GetAtt:
+          - publicalb
+          - Outputs.PublicAlbDnsName
+      TemplateURL: https://s3.us-east-1.amazonaws.com/cli-803394216630-bucket/8fbe66dce71c8cd321f85e6c687946fb.template
   publicalb:
     DependsOn:
     - newvpc
@@ -188,8 +258,8 @@ Resources:
       Tags:
       - Key: Name
         Value: webApp-Alb
-      TemplateURL: https://s3.us-east-1.amazonaws.com/cli-803394216630-bucket/117b67726a9ae9653d70cefc6e78b160.template
-  webAppAsgTest:
+      TemplateURL: https://s3.us-east-1.amazonaws.com/cli-803394216630-bucket/c8a4c62a39ff078c20ace6a535fd43a6.template
+  webAppAsg:
     Type: AWS::CloudFormation::Stack
     DependsOn:
     - newvpc
@@ -231,8 +301,8 @@ Resources:
           Ref: S3BucketName
       Tags:
       - Key: Name
-        Value: webApp-test
-      TemplateURL: https://s3.us-east-1.amazonaws.com/cli-803394216630-bucket/a6955ca52e6b77cac5f672fa0bf722b0.template
+        Value: webApp-Asg
+      TemplateURL: https://s3.us-east-1.amazonaws.com/cli-803394216630-bucket/8986d39d7471b7ac3582f1537757eefb.template
   bastion:
     Type: AWS::CloudFormation::Stack
     DependsOn:
@@ -263,7 +333,7 @@ Resources:
       Tags:
       - Key: Name
         Value: network-bastion
-      TemplateURL: https://s3.us-east-1.amazonaws.com/cli-803394216630-bucket/96b9790b2fc73bb2c7fa529340443831.template
+      TemplateURL: https://s3.us-east-1.amazonaws.com/cli-803394216630-bucket/082a3aec98ce0fc84f6a44ff621a45a1.template
   securitygroups:
     Type: AWS::CloudFormation::Stack
     DependsOn: newvpc
@@ -282,7 +352,7 @@ Resources:
       Tags:
       - Key: Name
         Value: network-securitygroups
-      TemplateURL: https://s3.us-east-1.amazonaws.com/cli-803394216630-bucket/af0eebbafc9329e16148bf696dfaf12d.template
+      TemplateURL: https://s3.us-east-1.amazonaws.com/cli-803394216630-bucket/a28992222810493c1b555ab48c77a8da.template
   newvpc:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -341,4 +411,4 @@ Resources:
       Tags:
       - Key: Name
         Value: network-vpc
-      TemplateURL: https://s3.us-east-1.amazonaws.com/cli-803394216630-bucket/c546c38fe519321e424e14a1cd323a0b.template
+      TemplateURL: https://s3.us-east-1.amazonaws.com/cli-803394216630-bucket/23efd246246190a58d9a5a10b8f53bd2.template
