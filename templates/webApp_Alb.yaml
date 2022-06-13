@@ -4,6 +4,9 @@ Description: Application Load Balancer
 
 Parameters:
   # AlbAcmCertificate:
+  #   AllowedPattern: ^$|(arn:aws:acm:)([a-z0-9/:-])*([a-z0-9])$
+  #   Description: '[ Optional ] The AWS Certification Manager certificate ARN for the ALB certificate - this certificate should be created in the region you wish to run the ALB and must reference the WordPress domain name you use below.'
+  #   Type: String
   AlbSecurityGroup:
     Description: Select the ALB security group.
     Type: AWS::EC2::SecurityGroup::Id
@@ -31,6 +34,18 @@ Resources:
       LoadBalancerArn: !Ref alb
       Port: 80
       Protocol: HTTP
+  # albListenerSslCertificate:
+  #   Condition: SslCertificate
+  #   Type : AWS::ElasticLoadBalancingV2::Listener
+  #   Properties:
+  #     Certificates:
+  #     - CertificateArn: !Ref AlbAcmCertificate
+  #     DefaultActions:
+  #     - Type: forward
+  #       TargetGroupArn: !Ref albTargetGroup
+  #     LoadBalancerArn: !Ref alb
+  #     Port: 443
+  #     Protocol: HTTPS
   alb: 
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Condition: SubnetsAvailable
@@ -61,17 +76,22 @@ Resources:
       VpcId: !Ref Vpc
 Outputs:
   PublicAlbTargetGroupArn:
+    Description: Alb Target group Arn
     Value:
       !Ref albTargetGroup
   PublicAlbCanonicalHostedZoneId:
+    Description: Alb Canonical Hosted Zone Id 
     Value:
       !GetAtt alb.CanonicalHostedZoneID
   PublicAlbDnsName:
+    Description: Alb Dns Name
     Value:
       !GetAtt alb.DNSName
   PublicAlbFullName:
+    Description: Alb Full Name
     Value:
       !GetAtt alb.LoadBalancerFullName
   PublicAlbHostname:
+    Description: Alb Host Name
     Value:
       !Join [ '', [ 'http://', !GetAtt alb.DNSName ] ]
