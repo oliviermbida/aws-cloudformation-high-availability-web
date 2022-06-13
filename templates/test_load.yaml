@@ -1,0 +1,191 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Load Generator Auto Scaling Group 
+Parameters:
+  LoadAmiId:
+    Description: AMI Id
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+  LoadAsgName:
+    Description: Load Auto Scaling Group Name
+    Type: String
+    Default: Example Load Auto Scaling Group
+  LoadAsgMin:
+    Description: Load Auto Scaling Group Min Size
+    Type: Number
+    Default: 2
+  LoadAsgMax:
+    Description: Load Auto Scaling Group Max Size
+    Type: Number
+    Default: 10
+  LoadAsgDesired:
+    Description: Load Auto Scaling Group Desired Capacity
+    Type: Number
+    Default: 2
+  LoadInstanceType:
+    Description: Amazon EC2 Instance Type
+    Type: String
+    Default: "m5.8xlarge"
+  EC2KeyName: 
+    Description: Amazon EC2 Key Pair
+    Type: "AWS::EC2::KeyPair::KeyName"
+  LoadAsgVpc:
+    AllowedPattern: ^(vpc-)([a-z0-9]{8}|[a-z0-9]{17})$
+    Description: The Vpc Id of an existing Vpc.
+    Type: AWS::EC2::VPC::Id
+  LoadSubnets:
+    Description: "Comma-delimited list of Public subnets"
+    Type: CommaDelimitedList
+  ServerSecurityGroup:
+    Description: Select the load security group.
+    Type: AWS::EC2::SecurityGroup::Id
+  ApplicationLoadBalancer:
+    Description: Alb Id to target the load.
+    Type: String
+
+Resources: 
+  LoadLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !Ref LoadAmiId
+        InstanceType: !Ref LoadInstanceType
+        KeyName: !Ref EC2KeyName
+        SecurityGroupIds:
+          - !Ref LoadSecurityGroup
+        IamInstanceProfile:
+          Arn: !GetAtt
+            - LoadInstanceProfile
+            - Arn
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: ScalingLoadInstance            
+        UserData: 
+          'Fn::Base64': 
+            !Sub 
+              - |- 
+                Content-Type: multipart/mixed; boundary="//"
+                MIME-Version: 1.0
+                --//
+                Content-Type: text/cloud-config; charset="us-ascii"
+                MIME-Version: 1.0
+                Content-Transfer-Encoding: 7bit
+                Content-Disposition: attachment; filename="cloud-config.txt"
+                #cloud-config
+                cloud_final_modules:
+                - [scripts-user, always]
+                --//
+                Content-Type: text/x-shellscript; charset="us-ascii"
+                MIME-Version: 1.0
+                Content-Transfer-Encoding: 7bit
+                Content-Disposition: attachment; filename="userdata.txt"
+                #!/bin/bash
+                
+                amazon-linux-extras install epel -y
+                yum -y install curl
+                curl -sL https://rpm.nodesource.com/setup_14.x | sudo bash -
+                yum install -y nodejs
+                npm install -g artillery@latest -y
+                artillery dino
+                systemctl start crond
+                systemctl enable crond
+                
+                cat <<EoF > /tmp/recurring-ramp-up-load.yaml
+                config:
+                  target: "http://${applicationLoadBalancerDnsName}"
+                  http:
+                    timeout: 240
+                  phases:
+                    - duration: 300
+                      arrivalRate: 20
+                      name: Warm up
+                    - duration: 600
+                      arrivalRate: 20
+                      rampTo: 200
+                      name: Ramp up load
+                    - duration: 5400
+                      arrivalRate: 200
+                      name: Sustained load
+                    - duration: 900
+                      arrivalRate: 200
+                      rampTo: 20
+                      name: Ramp down load
+                scenarios:
+                  - name: "Get Home Page"
+                    flow:
+                      - get:
+                          url: "/"
+                EoF
+                cat <<EoF > /tmp/recurring-morning-spike.yaml
+                config:
+                  target: "http://${applicationLoadBalancerDnsName}"
+                  http:
+                    timeout: 240
+                  phases:
+                    - duration: 10
+                      arrivalRate: 20
+                      name: Warm up
+                    - duration: 10
+                      arrivalRate: 20
+                      rampTo: 400
+                      name: Ramp up load
+                    - duration: 6280
+                      arrivalRate: 400
+                      name: Sustained load
+                    - duration: 900
+                      arrivalRate: 400
+                      rampTo: 20
+                      name: Ramp down load
+                scenarios:
+                  - name: "Get Home Page"
+                    flow:
+                      - get:
+                          url: "/"
+                EoF
+                crontab<<EoF
+                0 0 * * * MULTICORE=1 ARTILLERY_WORKERS=16 node --max_old_space_size=3092 `which artillery` run /tmp/recurring-ramp-up-load.yaml
+                0 4 * * * MULTICORE=1 ARTILLERY_WORKERS=16 node --max_old_space_size=3092 `which artillery` run /tmp/recurring-ramp-up-load.yaml
+                0 8 * * * MULTICORE=1 ARTILLERY_WORKERS=16 node --max_old_space_size=3092  `which artillery` run /tmp/recurring-morning-spike.yaml
+                0 12 * * * MULTICORE=1 ARTILLERY_WORKERS=16 node --max_old_space_size=3092 `which artillery` run /tmp/recurring-ramp-up-load.yaml
+                0 16 * * * MULTICORE=1 ARTILLERY_WORKERS=16 node --max_old_space_size=3092 `which artillery` run /tmp/recurring-ramp-up-load.yaml
+                0 20 * * * MULTICORE=1 ARTILLERY_WORKERS=16 node --max_old_space_size=3092 `which artillery` run /tmp/recurring-ramp-up-load.yaml
+                EoF
+                --//
+              - { 
+                  applicationLoadBalancerDnsName: !GetAtt ApplicationLoadBalancer.DNSName
+                }
+
+  LoadInstanceRole:
+    Type: "AWS::IAM::Role"
+    Properties:           
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Principal: 
+              Service: 
+                - "ec2.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Path: "/"
+  LoadInstanceProfile: 
+    Type: "AWS::IAM::InstanceProfile"
+    Properties: 
+      Path: "/"
+      Roles: 
+        - Ref: "LoadInstanceRole"
+
+  LoadAutoScalingGroup:    
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties: 
+      AutoScalingGroupName: !Ref LoadAsgName
+      LaunchTemplate: 
+        LaunchTemplateId: !Ref LoadLaunchTemplate
+        Version: !GetAtt LoadLaunchTemplate.LatestVersionNumber
+      DesiredCapacity: !Ref LoadAsgDesired
+      MaxSize: !Ref LoadAsgMax
+      MinSize: !Ref LoadAsgMin
+      VPCZoneIdentifier: 
+        Ref: LoadSubnets
