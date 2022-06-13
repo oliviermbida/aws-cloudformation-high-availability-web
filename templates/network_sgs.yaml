@@ -147,16 +147,19 @@ Resources:
         !Ref Vpc           
 Outputs:
   BastionSecurityGroup:
+    Description: Bastion Security group 
     Value: !Ref BastionSecurityGroup
     Export:
       Name: 
         Fn::Sub: "${AWS::StackName}-BastionSecurityGroup"
   WebAppSecurityGroup:
+    Description: Web Application security group 
     Value: !Ref WebAppSecurityGroup
     Export:
       Name: 
         Fn::Sub: "${AWS::StackName}-WebAppSecurityGroup"
   PublicAlbSecurityGroup:
+    Description: Alb Security group 
     Value: !Ref PublicAlbSecurityGroup
     Export:
       Name: 
