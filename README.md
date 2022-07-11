@@ -14,11 +14,6 @@ In this project, I will build the infrastructure to host a high availability web
 7. Optional Cloudfront distribution to serve the web application.
 8. Optional Route53 record set for domain (e.g example.com)
 
-## Solution preview
-
-[Application Load Balancer Endpoint](http://cfnStac-alb-1JB8BB95TYWJW-1977568606.us-east-1.elb.amazonaws.com/)
-
-[Cloudfront Endpoint](http://d1o4y8j8afxlp1.cloudfront.net/)
 
 ## Solution details
 
